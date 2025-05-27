@@ -6,6 +6,7 @@ import Index from './views/Index/Index';
 import NotFound from './views/NotFound/NotFound';
 import Register from './views/Register/Register';
 import UserProfile from './views/UserProfile/UserProfile';
+import StockQuery from './views/Stock/StockQuery';
 import { useNavigate } from 'react-router-dom';
 import { setNavigate } from './utils/http';
 import RequierAuth from './components/RequireAuth/RequireAuth';
@@ -30,7 +31,7 @@ function AppRoutes() {
         <Route path="/strategy" element={<div>Strategy</div>} />
         <Route path="/strategy/manage" element={<div>Strategy Manage</div>} />
         <Route path="/strategy/backtest" element={<div>Strategy Backtest</div>} />
-        <Route path="/stock" element={<div>Stock</div>} />
+        <Route path="/stock" element={<StockQuery />} />
         <Route path="/trade" element={<div>Trade</div>} />
         <Route path="/user/profile" element={<UserProfile />} />
       </Route>

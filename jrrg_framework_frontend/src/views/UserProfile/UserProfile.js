@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Avatar, Card, Typography, Row, Col, Button, Spin, message, Divider } from 'antd';
-import { UserOutlined, EditOutlined, MailOutlined, PhoneOutlined, IdcardOutlined } from '@ant-design/icons';
+import { UserOutlined, EditOutlined, MailOutlined, PhoneOutlined, IdcardOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import './UserProfile.scss';
 import { $getCurrentUserInfo } from '../../api/userApi';
+import { useNavigate } from 'react-router-dom';
 
 const { Title, Text } = Typography;
 
@@ -11,6 +12,7 @@ const UserProfile = () => {
   const [userInfo, setUserInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const navigate = useNavigate();
 
   // 在组件挂载时获取用户信息
   useEffect(() => {
@@ -35,6 +37,11 @@ const UserProfile = () => {
   // 处理编辑按钮点击事件（这里只是示例，实际功能需要进一步开发）
   const handleEditProfile = () => {
     message.info('编辑个人资料功能待开发');
+  };
+
+  // 处理返回按钮点击事件
+  const handleGoBack = () => {
+    navigate(-1); // 返回上一页
   };
 
   // 如果正在加载，显示加载状态
@@ -65,6 +72,15 @@ const UserProfile = () => {
 
   return (
     <div className="user-profile-container">
+      <Button 
+        type="primary" 
+        icon={<ArrowLeftOutlined />} 
+        onClick={handleGoBack}
+        style={{ marginBottom: '16px' }}
+      >
+        返回
+      </Button>
+      
       <div className="profile-header">
         <div className="avatar-container">
           <Avatar size={100} icon={<UserOutlined />} />

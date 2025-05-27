@@ -110,6 +110,9 @@ const Index = () => {
             });
         });
         setBreadcrumbItems(updatedItems);
+        
+        // 导航到对应的路由
+        navigate(e.key);
     };
 
     return (

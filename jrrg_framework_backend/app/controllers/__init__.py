@@ -1,2 +1,3 @@
 # 在包的__init.py文件中通过如下的固定写法导入user_controller.py中定义的蓝图user_controller
 from .user_controller import user_controller
+from .stock_controller import stock_controller
