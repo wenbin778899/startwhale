@@ -1,0 +1,32 @@
+# requests库版本锁定，爬虫的核心库
+requests==2.32.3
+# beautifulsoup4库
+beautifulsoup4==4.12.3
+# 为beautifulsoup4库提供实际解析功能
+lxml==5.3.0
+# jupyter
+jupyter==1.1.1
+# 数值矩阵运算包：numpy
+numpy==2.2.2
+# 表格处理工具包：pandas
+pandas==2.2.3
+# 绘图包：matplotlib
+matplotlib==3.10.0
+# flask框架
+flask==3.1.0
+# python连接mysql数据库驱动
+mysql-connector-python==9.2.0
+# ORM库
+Flask-SQLalchemy==3.1.1
+# pytest
+pytest==8.3.4
+# pytest生成测试报告的插件
+pytest-testreport==1.1.6
+####################################################################
+# 如下部分是installation章节中没有提供的，如果你之前有按照installation章节部分配置好所有环境，那么可以仅安装如下内容（当然直接通过pip install -r requirements.txt也是一样的，因为pip会自动跳过那些已经安装且与指定版本一样的库）
+# bcrypt加密库，用于对秘钥进行加密
+bcrypt==4.2.1
+# 解析.env文件的库，用于进行服务配置
+python-dotenv==1.0.1
+# Flask提供关于jwt功能的扩展，用于生成与校验jwt
+Flask-JWT-Extended==4.7.1

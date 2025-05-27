@@ -1,0 +1,84 @@
+// 使页面居中
+.register-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background: #f4f6f8;
+}
+
+// 表单外层卡片
+.register-card {
+    width: 400px;
+    padding: 30px;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+// 标题样式
+.register-title {
+    text-align: center;
+    font-size: 24px;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 20px;
+}
+
+// 每个 Form.Item 的样式优化
+.ant-form-item {
+    margin-bottom: 16px;
+}
+
+// 输入框优化
+.ant-input-affix-wrapper {
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #d9d9d9;
+    transition: all 0.3s;
+}
+
+// 输入框聚焦时
+.ant-input-affix-wrapper:focus-within {
+    border-color: #1890ff;
+    box-shadow: 0 0 5px rgba(24, 144, 255, 0.2);
+}
+
+// 按钮样式优化
+.ant-btn {
+    height: 40px;
+    border-radius: 8px;
+    font-size: 16px;
+    transition: all 0.3s;
+}
+
+.ant-btn-primary {
+    background-color: #1890ff;
+    border-color: #1890ff;
+}
+
+.ant-btn-primary:hover {
+    background-color: #40a9ff;
+    border-color: #40a9ff;
+}
+
+// 重置按钮样式
+.ant-btn-default {
+    margin-top: 10px;
+    background: #fff;
+    color: #1890ff;
+    border: 1px solid #1890ff;
+}
+
+.ant-btn-default:hover {
+    background: #e6f7ff;
+    border-color: #40a9ff;
+}
+
+// 响应式优化
+@media (max-width: 480px) {
+    .register-card {
+        width: 90%;
+        padding: 20px;
+    }
+}
