@@ -811,11 +811,12 @@ const StockQuery = () => {
             onSearch={handleInputChange}
             value={keyword}
             //notFoundContent={autoCompleteLoading ? <Spin size="small" /> : "   "}
-            placeholder="请输入股票代码"
+            //placeholder="请输入股票代码"
             filterOption={false}
             defaultActiveFirstOption={false}
           >
             <Input 
+              placeholder="请输入股票代码"
               prefix={<SearchOutlined />}
               onPressEnter={handleSearch}
               allowClear

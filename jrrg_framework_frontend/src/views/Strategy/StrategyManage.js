@@ -37,13 +37,20 @@ import {
   HeartOutlined,
   HeartFilled,
   RiseOutlined,
-  FallOutlined
+  FallOutlined,
+  RollbackOutlined,
+  FullscreenOutlined,
+  DownOutlined
 } from '@ant-design/icons';
 import { 
   getFavoriteStocks, 
   addFavoriteStock, 
   removeFavoriteStock,
-  getAIAnalysis
+  updateFavoriteStockNote,
+  getAIAnalysis,
+  getDeepseekAnalysis,
+  getAnalysisHistory,
+  refreshAnalysisHistory
 } from '../../api/strategy';
 import { getStockInfo } from '../../api/stock';
 import './StrategyManage.css';
@@ -67,6 +74,21 @@ const StrategyManage = () => {
   const [userMessage, setUserMessage] = useState('');
   const [selectedStockForAI, setSelectedStockForAI] = useState(null);
   const [analysisHistory, setAnalysisHistory] = useState([]);
+
+  // 历史记录分页和加载状态
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyPageSize, setHistoryPageSize] = useState(5);
+  const [historyTotal, setHistoryTotal] = useState(0);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyMoreAvailable, setHistoryMoreAvailable] = useState(true);
+  const [historyFullscreen, setHistoryFullscreen] = useState(false);
+
+  // 添加新的状态变量
+  const [selectedHistory, setSelectedHistory] = useState(null);
+  const [historyDetailVisible, setHistoryDetailVisible] = useState(false);
+
+  // 新增状态跟踪前一个对话
+  const [previousContext, setPreviousContext] = useState(null);
 
   // 页面加载时获取自选股票
   useEffect(() => {
@@ -198,11 +220,11 @@ const StrategyManage = () => {
       } else if (error.request) {
         // 请求已发出但没有收到响应
         console.error('请求失败:', error.request);
-        message.error('网络错误，请检查后端服务是否运行');
+        //message.error('网络错误，请检查后端服务是否运行');
       } else {
         // 其他错误
         console.error('未知错误:', error.message);
-        message.error('加载自选股票失败');
+        //message.error('加载自选股票失败');
       }
       
       setFavoriteStocks([]); // 确保状态被设置
@@ -356,6 +378,39 @@ const StrategyManage = () => {
     }
   };
 
+  // 处理继续对话按钮点击
+  const handleContinueDialog = () => {
+    if (selectedHistory) {
+      // 获取历史分析的股票信息
+      const historyStock = selectedHistory.stock ? {
+        stock_code: selectedHistory.stock.stock_code,
+        stock_name: selectedHistory.stock.stock_name
+      } : null;
+      
+      // 设置股票和前置内容
+      if (historyStock) {
+        setSelectedStockForAI(historyStock.stock_code);
+      }
+      
+      // 准备提示，告知用户这是基于上一个对话的继续
+      const continuationPrompt = `基于刚才关于"${selectedHistory.question}"的问题，我想进一步询问：`;
+      setUserMessage(continuationPrompt);
+      
+      // 设置前一个对话上下文
+      setPreviousContext({
+        question: selectedHistory.question,
+        answer: selectedHistory.answer
+      });
+      
+      // 关闭历史详情模态框，打开AI分析模态框
+      setHistoryDetailVisible(false);
+      setAiAnalysisVisible(true);
+      
+      // 提示用户
+      message.info('您可以继续对话，修改问题后点击"获取分析"');
+    }
+  };
+
   // 发起AI分析
   const handleAIAnalysis = async () => {
     if (!userMessage.trim()) {
@@ -375,18 +430,33 @@ const StrategyManage = () => {
         }
       }
 
-      const response = await getAIAnalysis(analysisPrompt);
-      if (response.code === 0) {
-        setAiResponse(response.data.analysis);
-        // 添加到历史记录
+      // 直接调用Deepseek API，传入前一个对话上下文（如果有）
+      const response = await getDeepseekAnalysis(analysisPrompt, selectedStockForAI, previousContext);
+      
+      // 重置上下文状态，避免影响下一次对话
+      setPreviousContext(null);
+      
+      // 处理响应结果
+      if (response && response.analysis) {
+        setAiResponse(response.analysis);
+        setAiAnalysisVisible(true);
+        
+        // 添加到本地历史记录（临时显示）
         const newHistory = {
           id: Date.now(),
           question: userMessage,
-          answer: response.data.analysis,
+          answer: response.analysis,
           stock: selectedStockForAI ? favoriteStocks.find(stock => stock.stock_code === selectedStockForAI) : null,
           timestamp: new Date().toLocaleString()
         };
-        setAnalysisHistory(prev => [newHistory, ...prev.slice(0, 4)]); // 保留最近5条记录
+        setAnalysisHistory(prev => [newHistory, ...prev.slice(0, 4)]);
+        
+        // 添加一个小延迟，确保后端先保存完成，再刷新历史记录
+        setTimeout(() => {
+          handleRefreshHistory();
+        }, 500);
+      } else {
+        message.error('未获取到有效的分析结果');
       }
     } catch (error) {
       message.error('AI分析失败，请稍后重试');
@@ -394,6 +464,155 @@ const StrategyManage = () => {
     } finally {
       setAiLoading(false);
     }
+  };
+
+  // 加载更多历史记录
+  const loadMoreHistory = async () => {
+    if (!historyMoreAvailable || historyLoading) return;
+    
+    setHistoryLoading(true);
+    try {
+      // 计算当前已加载的记录数作为偏移量
+      const currentOffset = analysisHistory.length;
+      const currentLimit = historyPageSize;
+      
+      console.log(`加载更多历史记录，偏移量：${currentOffset}，限制：${currentLimit}`);
+      const historyResponse = await getAnalysisHistory(currentLimit, currentOffset);
+      
+      if (historyResponse && historyResponse.code === 0) {
+        // 将服务器返回的历史记录映射为前端需要的格式
+        const newServerHistory = historyResponse.data.map(item => ({
+          id: item.id,
+          question: item.question,
+          answer: item.answer,
+          stock: item.stock_code ? {
+            stock_code: item.stock_code,
+            stock_name: item.stock_name || '未知股票'
+          } : null,
+          timestamp: new Date(item.created_at).toLocaleString()
+        }));
+        
+        // 获取元数据
+        const meta = historyResponse.meta || {};
+        const total = meta.total || 0;
+        
+        // 将新记录追加到现有历史记录
+        const updatedHistory = [...analysisHistory, ...newServerHistory];
+        
+        // 检查是否还有更多可以加载
+        setHistoryMoreAvailable(updatedHistory.length < total);
+        setHistoryPage(historyPage + 1);
+        setHistoryTotal(total);
+        
+        // 更新历史记录状态
+        setAnalysisHistory(updatedHistory);
+        
+        if (newServerHistory.length > 0) {
+          message.success(`已加载${newServerHistory.length}条新记录`);
+        } else {
+          message.info('没有更多历史记录了');
+          setHistoryMoreAvailable(false);
+        }
+      }
+    } catch (error) {
+      console.error('加载更多历史记录失败:', error);
+      message.error('加载历史记录失败');
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  // 添加初始加载历史记录的功能
+  useEffect(() => {
+    loadFavoriteStocks();
+    
+    // 加载分析历史
+    const loadAnalysisHistory = async () => {
+      setHistoryLoading(true);
+      try {
+        // 初始加载20条历史记录
+        const historyResponse = await getAnalysisHistory(20, 0);
+        if (historyResponse && historyResponse.code === 0) {
+          console.log('初始加载分析历史:', historyResponse);
+          // 将服务器返回的历史记录映射为前端需要的格式
+          const serverHistory = historyResponse.data.map(item => ({
+            id: item.id,
+            question: item.question,
+            answer: item.answer,
+            stock: item.stock_code ? {
+              stock_code: item.stock_code,
+              stock_name: item.stock_name || '未知股票'
+            } : null,
+            timestamp: new Date(item.created_at).toLocaleString()
+          }));
+          
+          // 获取元数据
+          const meta = historyResponse.meta || {};
+          const total = meta.total || serverHistory.length;
+          
+          // 更新历史记录状态
+          setAnalysisHistory(serverHistory);
+          setHistoryTotal(total);
+          setHistoryMoreAvailable(serverHistory.length < total);
+          
+          if (total > 0) {
+            message.success(`成功加载${serverHistory.length}条历史记录，共${total}条`);
+          }
+        }
+      } catch (error) {
+        console.error('加载分析历史失败:', error);
+        message.error('加载历史记录失败');
+      } finally {
+        setHistoryLoading(false);
+      }
+    };
+    
+    loadAnalysisHistory();
+  }, []);
+
+  // 处理刷新历史记录
+  const handleRefreshHistory = async () => {
+    setHistoryLoading(true);
+    try {
+      // 重置分页状态，重新加载第一页
+      setHistoryPage(1);
+      
+      // 获取20条历史记录
+      const historyResponse = await getAnalysisHistory(20, 0);
+      
+      if (historyResponse && historyResponse.code === 0) {
+        const serverHistory = historyResponse.data.map(item => ({
+          id: item.id,
+          question: item.question,
+          answer: item.answer,
+          stock: item.stock_code ? {
+            stock_code: item.stock_code,
+            stock_name: item.stock_name || '未知股票'
+          } : null,
+          timestamp: new Date(item.created_at).toLocaleString()
+        }));
+        
+        // 获取元数据
+        const meta = historyResponse.meta || {};
+        const total = meta.total || 0;
+        
+        setAnalysisHistory(serverHistory);
+        setHistoryTotal(total);
+        setHistoryMoreAvailable(serverHistory.length < total);
+        message.success('历史记录已刷新');
+      }
+    } catch (error) {
+      console.error('刷新历史记录失败:', error);
+      message.error('刷新历史记录失败');
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  // 处理历史项点击
+  const handleHistoryItemClick = (historyItem) => {
+    setSelectedHistory(historyItem);
+    setHistoryDetailVisible(true);
   };
 
   // 自选股票表格列定义
@@ -536,6 +755,21 @@ const StrategyManage = () => {
     }
   ];
 
+  // 修改历史记录详情模态框的底部按钮
+  const historyModalFooter = [
+    <Button 
+      key="continue" 
+      type="primary" 
+      icon={<SendOutlined />}
+      onClick={handleContinueDialog}
+    >
+      继续对话
+    </Button>,
+    <Button key="close" onClick={() => setHistoryDetailVisible(false)}>
+      关闭
+    </Button>
+  ];
+
   return (
     <div className="strategy-manage">
       <div className="strategy-manage-header">
@@ -656,32 +890,76 @@ const StrategyManage = () => {
 
               {/* 分析历史 */}
               {analysisHistory.length > 0 && (
-                <div>
+                <div className={historyFullscreen ? "history-fullscreen" : ""}>
                   <Divider orientation="left">
-                    <Text strong>分析历史</Text>
+                    <Space>
+                      <Text strong>分析历史</Text>
+                      <Text type="secondary">({historyTotal}条)</Text>
+                      <Button 
+                        type="link" 
+                        icon={<ReloadOutlined />} 
+                        onClick={handleRefreshHistory}
+                        loading={historyLoading}
+                        size="small"
+                      >
+                        刷新
+                      </Button>
+                      <Button 
+                        type="link" 
+                        icon={historyFullscreen ? <RollbackOutlined /> : <FullscreenOutlined />} 
+                        onClick={() => setHistoryFullscreen(!historyFullscreen)}
+                        size="small"
+                      >
+                        {historyFullscreen ? '返回' : '展开'}
+                      </Button>
+                    </Space>
                   </Divider>
-                  <List
-                    size="small"
-                    dataSource={analysisHistory}
-                    renderItem={(item) => (
-                      <List.Item>
-                        <List.Item.Meta
-                          avatar={<Avatar icon={<RobotOutlined />} />}
-                          title={
-                            <Space>
-                              <Text ellipsis style={{ maxWidth: 200 }}>{item.question}</Text>
-                              {item.stock && <Tag color="blue">{item.stock.stock_name}</Tag>}
-                            </Space>
-                          }
-                          description={
-                            <Text type="secondary" style={{ fontSize: 12 }}>
-                              {item.timestamp}
-                            </Text>
-                          }
-                        />
-                      </List.Item>
+                  
+                  <div className="history-list-container">
+                    <List
+                      loading={historyLoading}
+                      className="history-list"
+                      size="small"
+                      dataSource={analysisHistory}
+                      renderItem={(item) => (
+                        <List.Item 
+                          className="history-item" 
+                          onClick={() => handleHistoryItemClick(item)}
+                          style={{ cursor: 'pointer' }}
+                          hoverable="true"
+                        >
+                          <List.Item.Meta
+                            avatar={<Avatar icon={<RobotOutlined />} />}
+                            title={
+                              <Space>
+                                <Text ellipsis style={{ maxWidth: 200 }}>{item.question}</Text>
+                                {item.stock && <Tag color="blue">{item.stock.stock_name}</Tag>}
+                              </Space>
+                            }
+                            description={
+                              <Text type="secondary" style={{ fontSize: 12 }}>
+                                {item.timestamp} <span style={{ color: '#1890ff' }}>[点击查看]</span>
+                              </Text>
+                            }
+                          />
+                        </List.Item>
+                      )}
+                    />
+                    
+                    {historyMoreAvailable && (
+                      <div style={{ textAlign: 'center', marginTop: 12 }}>
+                        <Button 
+                          onClick={loadMoreHistory} 
+                          loading={historyLoading}
+                          type="default"
+                          size="small"
+                          icon={<DownOutlined />}
+                        >
+                          加载更多
+                        </Button>
+                      </div>
                     )}
-                  />
+                  </div>
                 </div>
               )}
             </Space>
@@ -785,6 +1063,7 @@ const StrategyManage = () => {
               value={userMessage}
               onChange={(e) => setUserMessage(e.target.value)}
               placeholder="请输入您的分析问题..."
+              style={{ marginTop: 8 }}
             />
           </div>
 
@@ -802,17 +1081,56 @@ const StrategyManage = () => {
               <Divider orientation="left">
                 <Text strong>AI分析结果</Text>
               </Divider>
-              <div style={{ 
-                backgroundColor: '#f6f6f6', 
-                padding: '16px', 
-                borderRadius: '6px',
-                border: '1px solid #d9d9d9'
-              }}>
+              <div className="history-detail-answer">
                 <Text>{aiResponse}</Text>
               </div>
             </div>
           )}
+          
+          <div style={{ textAlign: 'right', marginTop: 8 }}>
+            <Text type="secondary">生成时间: {new Date().toLocaleString()}</Text>
+          </div>
         </Space>
+      </Modal>
+
+      {/* 历史记录详情弹窗 */}
+      <Modal
+        title="历史分析详情"
+        open={historyDetailVisible}
+        onCancel={() => setHistoryDetailVisible(false)}
+        footer={historyModalFooter}
+        width={800}
+      >
+        {selectedHistory && (
+          <Space direction="vertical" style={{ width: '100%' }} size="middle">
+            {selectedHistory.stock && (
+              <Alert
+                message={`分析股票：${selectedHistory.stock.stock_name}(${selectedHistory.stock.stock_code})`}
+                type="info"
+              />
+            )}
+            
+            <div>
+              <Text strong>分析问题：</Text>
+              <div className="history-detail-question">
+                <Text>{selectedHistory.question}</Text>
+              </div>
+            </div>
+
+            <div>
+              <Divider orientation="left">
+                <Text strong>AI分析结果</Text>
+              </Divider>
+              <div className="history-detail-answer">
+                <Text>{selectedHistory.answer}</Text>
+              </div>
+            </div>
+            
+            <div style={{ textAlign: 'right' }}>
+              <Text type="secondary">分析时间: {selectedHistory.timestamp}</Text>
+            </div>
+          </Space>
+        )}
       </Modal>
     </div>
   );

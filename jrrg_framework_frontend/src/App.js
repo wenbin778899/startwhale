@@ -5,9 +5,12 @@ import Login from './views/Login/Login';
 import Index from './views/Index/Index';
 import NotFound from './views/NotFound/NotFound';
 import Register from './views/Register/Register';
-import UserProfile from './views/UserProfile/UserProfile';
+import UserProfile from './views/UserProfile';
+import ProfileDetail from './views/UserProfile/UserProfile';
 import StockQuery from './views/Stock/StockQuery';
 import StrategyManage from './views/Strategy/StrategyManage';
+import UserPortrait from './views/UserProfile/UserPortrait';
+import Home from './views/Home/Home';
 import { useNavigate } from 'react-router-dom';
 import { setNavigate } from './utils/http';
 import RequierAuth from './components/RequireAuth/RequireAuth';
@@ -28,13 +31,15 @@ function AppRoutes() {
 
       {/* 选择在App.js中统一设置路由，这样一来当其他页面想要使用该路由时，只要在相应位置使用<Outlet />代替即可 */}
       <Route path='/' element={<RequierAuth><Index /></RequierAuth>} >
-        <Route path="/home" element={<div>Home</div>} />
+        <Route path="/home" element={<Home />} />
         <Route path="/strategy" element={<div>Strategy</div>} />
         <Route path="/strategy/manage" element={<StrategyManage />} />
         <Route path="/strategy/backtest" element={<div>Strategy Backtest</div>} />
         <Route path="/stock" element={<StockQuery />} />
         <Route path="/trade" element={<div>Trade</div>} />
         <Route path="/user/profile" element={<UserProfile />} />
+        <Route path="/user/detail" element={<ProfileDetail />} />
+        <Route path="/user/portrait" element={<UserPortrait />} />
       </Route>
 
       {/* 通常还需要统一设置一个404页面，在react-router-dom中，设置path="*"表示匹配所有未被定义的路由 */}

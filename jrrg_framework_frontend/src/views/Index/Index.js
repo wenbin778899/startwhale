@@ -1,52 +1,54 @@
-import { HomeOutlined, LineChartOutlined, MoneyCollectOutlined, BulbOutlined, EditOutlined, RollbackOutlined, CopyrightOutlined, GithubOutlined, UserOutlined, SettingOutlined, LogoutOutlined } from '@ant-design/icons';
+import { HomeOutlined, LineChartOutlined, MoneyCollectOutlined, BulbOutlined, EditOutlined, RollbackOutlined, CopyrightOutlined, GithubOutlined, UserOutlined, SettingOutlined, LogoutOutlined, IdcardOutlined, ProfileOutlined } from '@ant-design/icons';
 import { Breadcrumb, Layout, Menu, Avatar, Tooltip, Dropdown } from 'antd';
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import './Index.scss';
 // 在create-react-app中，有两种方式引入图片资源：1.对于存放在public目录下的资源，可以直接通过相对路径引入；2.对于存放在src目录下的资源（如assets），需要通过import的方式引入，然后在代码中使用，这里使用的是第2种方式，这种方式可以实现图片资源的模块化管理
 import Logo from '../../assets/img/logo.png';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useNavigate } from 'react-router-dom';
 import { $userLogout } from '../../api/userApi';
-import { useNavigate } from 'react-router-dom';
 
 
 // 定义Index页面组件
 const Index = () => {
-    // 从本地存储获取用户信息（正常情况下一定能获取到，因为该组件是在登录成功后才会展示的）
-    const userInfo = JSON.parse(localStorage.getItem('user_info'));
-    // navigate
+    // 定义一个状态，用于存储用户信息
+    const [userInfo, setUserInfo] = useState({
+        nickname: localStorage.getItem('user_info') ? JSON.parse(localStorage.getItem('user_info')).nickname : "默认昵称"
+    });
+    // 定义导航对象，用于页面跳转
     const navigate = useNavigate();
 
     // 定义一个事件处理函数，用于处理注销菜单项的点击事件
     const handleLogoutMenuItemClick = async (e) => {
-        // 向后端发起注销请求
-        await $userLogout();
-        // 由于在$userLogout中已经将本地存储的用户信息清除了，所以这里只需要刷新页面即可（而且该函数已经处理了所有异常）
-        navigate("/login", { replace: true });
+        try {
+            // 调用登出API
+            await $userLogout();
+            // 刷新页面，返回登录页
+            window.location.reload();
+        } catch (error) {
+            console.error("登出失败", error);
+        }
     }
     // 当鼠标从用户昵称上悬停时，会显示如下的菜单项，下面也只是一个示例，具体可以根据需求进行修改
     // // TODO 演示如何创建一个新页面
     const dropdownMenuItems = [
         {
-            key: 'my_account',
-            label: '我的账户',
+            label: '个人资料',
+            key: 'profile',
             icon: <UserOutlined />,
-            onClick: () => {
-                navigate("/user/profile");
-            }
+            onClick: () => navigate('/user/detail'),
         },
         {
-            type: 'divider',
+            label: '投资者画像',
+            key: 'portrait',
+            icon: <IdcardOutlined />,
+            onClick: () => navigate('/user/portrait'),
         },
         {
-            key: 'settings',
-            label: '设置',
-            icon: <SettingOutlined />,
-        },
-        {
+            label: '退出登录',
             key: 'logout',
-            label: '注销',
             icon: <LogoutOutlined />,
-            onClick: handleLogoutMenuItemClick
+            onClick: handleLogoutMenuItemClick,
+            danger: true,
         }
     ];
 
@@ -77,6 +79,10 @@ const Index = () => {
         getItem('股票行情', '/stock', <LineChartOutlined />),
         // 用于进行手工交易
         getItem('股票交易', '/trade', <MoneyCollectOutlined />),
+        getItem('个人中心', '/user', <UserOutlined />, [
+            getItem('个人资料', '/user/detail', <ProfileOutlined />),
+            getItem('投资者画像', '/user/profile', <IdcardOutlined />)
+        ])
     ];
 
 
