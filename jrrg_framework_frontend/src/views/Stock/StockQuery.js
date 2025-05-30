@@ -45,7 +45,7 @@ const StockQuery = () => {
     setAutoCompleteLoading(true);
     try {
       const response = await searchStock(value);
-      if (response.code === 200 && response.data && response.data.length > 0) {
+      if (response.code === 0 && response.data && response.data.length > 0) {
         // 转换为AutoComplete需要的格式
         const options = response.data.map(item => ({
           value: item.代码,
@@ -96,7 +96,7 @@ const StockQuery = () => {
       
       // 如果不是股票代码，则先搜索获取股票代码
       const response = await searchStock(keyword);
-      if (response.code === 200) {
+      if (response.code === 0) {
         if (!response.data || response.data.length === 0) {
           message.info('未找到匹配的股票');
           setSearchResults([]);
@@ -130,7 +130,7 @@ const StockQuery = () => {
     setErrorMessage('');
     try {
       const response = await getStockInfo(symbol, days);
-      if (response.code === 200) {
+      if (response.code === 0) {
         setStockData(response.data);
         setSelectedStock(response.data.symbol);
         
@@ -157,7 +157,7 @@ const StockQuery = () => {
     setBasicInfoLoading(true);
     try {
       const response = await getStockBasicInfo(symbol);
-      if (response.code === 200) {
+      if (response.code === 0) {
         setStockBasicInfo(response.data);
       } else {
         console.error('获取股票基本信息失败:', response.message);
@@ -174,7 +174,7 @@ const StockQuery = () => {
     setNewsLoading(true);
     try {
       const response = await getStockNews(symbol, limit);
-      if (response.code === 200) {
+      if (response.code === 0) {
         setStockNews(response.data);
         if (response.data.length === 0) {
           message.info('未找到相关新闻');

@@ -7,40 +7,58 @@
     align-items: center;
     justify-content: space-between;
     padding: 0 20px;
-    background-color: #a2a631;
+    height: 70px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .header .title {
     flex-grow: 1;
     text-align: center;
     color: white;
-    font-size: 20px;
+    font-size: 24px;
     font-weight: bold;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    letter-spacing: 1px;
 }
 
 .header .ant-menu {
-    background-color: #0475e0;
+    background-color: transparent;
     flex: none;
 }
 
 .header .logo {
-    width: 120px;
-    height: 32px;
-    background: #0475e0;
+    width: 135px;
+    height: 47px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     margin-right: 20px;
+    padding: 5px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    object-fit: contain;
 }
 
 .header .avatar {
     margin-right: 10px;
+    background: rgba(255, 255, 255, 0.9);
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .header .nickname {
     max-width: 90px;
     color: white;
     font-size: 16px;
+    font-weight: 500;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+}
+
+.header .nickname:hover {
+    color: #f0f2f5;
 }
 
 .header .ant-menu-item {
@@ -50,8 +68,8 @@
 }
 
 .header .ant-menu-item-selected {
-    background-color: #f0f2f5 !important; // 选中背景颜色
-    color: #0475e0 !important; // 选中文本颜色
+    background-color: rgba(255, 255, 255, 0.2) !important; // 半透明白色背景
+    color: white !important; // 保持白色文本
     font-weight: bold;
 }
 

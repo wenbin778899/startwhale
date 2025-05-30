@@ -7,6 +7,7 @@ import NotFound from './views/NotFound/NotFound';
 import Register from './views/Register/Register';
 import UserProfile from './views/UserProfile/UserProfile';
 import StockQuery from './views/Stock/StockQuery';
+import StrategyManage from './views/Strategy/StrategyManage';
 import { useNavigate } from 'react-router-dom';
 import { setNavigate } from './utils/http';
 import RequierAuth from './components/RequireAuth/RequireAuth';
@@ -29,7 +30,7 @@ function AppRoutes() {
       <Route path='/' element={<RequierAuth><Index /></RequierAuth>} >
         <Route path="/home" element={<div>Home</div>} />
         <Route path="/strategy" element={<div>Strategy</div>} />
-        <Route path="/strategy/manage" element={<div>Strategy Manage</div>} />
+        <Route path="/strategy/manage" element={<StrategyManage />} />
         <Route path="/strategy/backtest" element={<div>Strategy Backtest</div>} />
         <Route path="/stock" element={<StockQuery />} />
         <Route path="/trade" element={<div>Trade</div>} />

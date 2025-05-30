@@ -42,7 +42,7 @@ npm install
 ### 步骤 3: 配置前端环境变量
 创建 `.env` 文件在前端项目根目录下：
 ```
-REACT_APP_API_URL=http://localhost:5000
+REACT_APP_API_URL=http://localhost:8080
 ```
 
 ### 步骤 4: 启动前端开发服务器
@@ -99,7 +99,7 @@ flask init-db
 ```bash
 flask run
 ```
-后端将在 http://localhost:5000 运行。
+后端将在 http://localhost:8080 运行。
 
 ## 常见问题解决
 
@@ -134,7 +134,7 @@ pip install gunicorn
 
 2. 启动 Gunicorn:
 ```bash
-gunicorn -w 4 -b 127.0.0.1:5000 "app:create_app()"
+gunicorn -w 4 -b 127.0.0.1:8080 "app:create_app()"
 ```
 
 3. 配置 Nginx 反向代理到 Gunicorn。

@@ -7,6 +7,7 @@ from app.config import register_logger
 # 导入定义的蓝图
 from app.controllers import user_controller
 from app.controllers import stock_controller
+from app.controllers import strategy_controller
 # 导入定义的数据库句柄
 from app.models import db
 
@@ -38,13 +39,16 @@ def create_app():
             "/user/info", 
             "/user/info/<user_id>",
             "/stock/info",
-            "/stock/search"
+            "/stock/search",
+            "/strategy/favorites",
+            "/strategy/ai-analysis"
         ]}
 
     # 注册Blueprint，并分别指定前缀
     # NOTE 接口定义规范：同属于一个功能模块的接口应当有相似的前缀，以便于管理和维护
     app.register_blueprint(user_controller, url_prefix='/user')
     app.register_blueprint(stock_controller, url_prefix='/stock')
+    app.register_blueprint(strategy_controller, url_prefix='/strategy')
 
     # 配置日志
     app = register_logger(app)
