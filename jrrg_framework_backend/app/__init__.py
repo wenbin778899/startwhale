@@ -8,6 +8,7 @@ from app.config import register_logger
 from app.controllers import user_controller
 from app.controllers import stock_controller
 from app.controllers import strategy_controller
+from app.controllers import fund_controller
 from app.controllers.user_profile_controller import user_profile_controller
 from app.controllers.news_controller import news_controller  # 导入新闻控制器
 # 导入定义的数据库句柄
@@ -93,6 +94,7 @@ def create_app():
     app.register_blueprint(user_controller, url_prefix='/user')
     app.register_blueprint(stock_controller, url_prefix='/stock')
     app.register_blueprint(strategy_controller, url_prefix='/strategy')
+    app.register_blueprint(fund_controller, url_prefix='/fund')
     app.register_blueprint(user_profile_controller, url_prefix='/user-profile')
     app.register_blueprint(news_controller, url_prefix='/news')  # 注册新闻蓝图
 

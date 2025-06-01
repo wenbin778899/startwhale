@@ -1,5 +1,12 @@
 .stock-query-container {
-  padding: 24px;
+  padding: 20px;
+  background-color: var(--bg-primary);
+  border-radius: 8px;
+  min-height: 500px;
+}
+
+[data-theme="dark"] .stock-query-container {
+  background-color: var(--bg-tertiary);
 }
 
 .search-section {
@@ -8,6 +15,11 @@
   padding: 20px;
   border-radius: 12px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="dark"] .search-section {
+  background: linear-gradient(135deg, rgba(40, 44, 52, 0.9) 0%, rgba(35, 39, 47, 0.95) 100%);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
 }
 
 .example-stock-tag {
@@ -29,9 +41,18 @@
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 }
 
+[data-theme="dark"] .chart-card {
+  background-color: var(--card-bg);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
 .chart-container {
   height: 400px;
   border-radius: 8px;
+}
+
+[data-theme="dark"] .chart-container {
+  background-color: var(--chart-bg);
 }
 
 .timeframe-selector {
@@ -47,6 +68,12 @@
   margin-bottom: 24px;
 }
 
+[data-theme="dark"] .info-card {
+  background-color: var(--card-bg);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  border-color: var(--border-color);
+}
+
 .info-loading-container {
   padding: 20px;
   text-align: center;
@@ -60,6 +87,10 @@
 .stock-info-item {
   min-width: 33.33%;
   padding: 8px 0;
+}
+
+[data-theme="dark"] .stock-info-item {
+  color: var(--text-primary);
 }
 
 .click-code {
@@ -81,10 +112,18 @@
   min-height: 200px;
 }
 
+[data-theme="dark"] .news-list {
+  background: var(--card-bg);
+}
+
 .news-item {
   display: flex;
   padding: 16px 0;
   border-bottom: 1px solid #f0f0f0;
+}
+
+[data-theme="dark"] .news-item {
+  border-bottom: 1px solid var(--border-color);
 }
 
 .news-item:last-child {
@@ -102,6 +141,10 @@
   line-height: 1.4;
 }
 
+[data-theme="dark"] .news-title {
+  color: var(--text-primary);
+}
+
 .news-info {
   display: flex;
   justify-content: space-between;
@@ -109,11 +152,20 @@
   color: #888;
 }
 
+[data-theme="dark"] .news-info {
+  color: var(--text-tertiary);
+}
+
 .news-source {
   border-radius: 8px;
   background: #f5f5f5;
   padding: 2px 6px;
   color: #555;
+}
+
+[data-theme="dark"] .news-source {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-secondary);
 }
 
 .price-change-positive {
@@ -124,8 +176,20 @@
   color: #3f8600 !important;
 }
 
+[data-theme="dark"] .price-change-positive {
+  color: #ff4d4f !important;
+}
+
+[data-theme="dark"] .price-change-negative {
+  color: #73d13d !important;
+}
+
 .stock-table {
   margin-top: 20px;
+}
+
+[data-theme="dark"] .stock-table {
+  background-color: var(--card-bg);
 }
 
 /* 响应式调整 */
@@ -160,11 +224,20 @@
   margin-bottom: 24px;
 }
 
+[data-theme="dark"] .market-news-card {
+  background-color: var(--card-bg);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
 .market-news-carousel {
   height: 150px;
   background: linear-gradient(to right, #f9f9f9, #f0f0f0);
   border-radius: 8px;
   overflow: hidden;
+}
+
+[data-theme="dark"] .market-news-carousel {
+  background: linear-gradient(to right, #1a1a1a, #141414);
 }
 
 .market-news-item {
@@ -185,12 +258,21 @@
   font-size: 14px;
 }
 
+[data-theme="dark"] .market-news-item p {
+  color: var(--text-secondary);
+}
+
 /* 相关股票卡片 */
 .related-stocks-card {
   border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
   margin-bottom: 24px;
+}
+
+[data-theme="dark"] .related-stocks-card {
+  background-color: var(--card-bg);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
 }
 
 .stock-tag {
@@ -213,6 +295,10 @@
   border-radius: 4px 4px 0 0;
 }
 
+[data-theme="dark"] .custom-tabs .ant-tabs-tab-active {
+  background: #111b26;
+}
+
 /* 卡片标题图标 */
 .card-title-with-icon {
   display: flex;
@@ -222,4 +308,150 @@
 
 .card-title-with-icon .anticon {
   color: #1890ff;
-} 
+}
+
+/* 深色模式额外样式 */
+[data-theme="dark"] .ant-empty-image {
+  opacity: 0.65;
+}
+
+[data-theme="dark"] .ant-table {
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .ant-table-thead > tr > th {
+  background-color: var(--table-header-bg);
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+[data-theme="dark"] .ant-table-tbody > tr > td {
+  border-bottom: 1px solid var(--border-color);
+}
+
+[data-theme="dark"] .ant-tag {
+  border-color: var(--border-color);
+}
+
+.search-form {
+  display: flex;
+  margin-bottom: 24px;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.search-input {
+  flex: 1;
+  min-width: 200px;
+}
+
+.stock-card {
+  margin-bottom: 24px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px var(--shadow-color);
+}
+
+[data-theme="dark"] .stock-card {
+  background-color: var(--card-bg);
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .stock-table .ant-table {
+  background-color: var(--card-bg);
+}
+
+.stock-chart {
+  height: 400px;
+  margin-bottom: 20px;
+}
+
+[data-theme="dark"] .stock-chart {
+  background-color: var(--chart-bg);
+}
+
+.stock-tabs {
+  margin-top: 20px;
+}
+
+[data-theme="dark"] .stock-tabs .ant-tabs-content {
+  background-color: var(--tab-content-bg);
+}
+
+.example-stocks {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.stock-news-card {
+  margin-bottom: 16px;
+}
+
+[data-theme="dark"] .stock-news-card {
+  background-color: var(--list-item-bg);
+}
+
+.news-limit-control {
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.description-item-value {
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .ant-descriptions-item-label,
+[data-theme="dark"] .ant-descriptions-item-content {
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .news-title a {
+  color: var(--color-primary);
+}
+
+[data-theme="dark"] .news-source,
+[data-theme="dark"] .news-time {
+  color: var(--text-tertiary);
+}
+
+[data-theme="dark"] .ant-empty-description {
+  color: var(--text-tertiary);
+}
+
+.stock-info-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.stock-price {
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.stock-change {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.positive-change {
+  color: #f5222d;
+}
+
+.negative-change {
+  color: #52c41a;
+}
+
+[data-theme="dark"] .positive-change {
+  color: #ff4d4f;
+}
+
+[data-theme="dark"] .negative-change {
+  color: #73d13d;
+}

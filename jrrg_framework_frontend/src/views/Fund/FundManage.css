@@ -1,0 +1,90 @@
+.fund-manage {
+  padding: 16px;
+}
+
+.history-item {
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.history-item:hover {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+.ai-analysis-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.previous-dialog {
+  margin-bottom: 16px;
+}
+
+.context-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.input-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.action-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  padding: 24px;
+}
+
+.response-container {
+  margin-top: 16px;
+}
+
+.response-card {
+  background-color: #f9f9f9;
+}
+
+.response-content {
+  white-space: pre-wrap;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.history-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.history-meta {
+  margin-top: 24px;
+  text-align: right;
+}
+
+.fund-info-item {
+  margin-bottom: 16px;
+}
+
+.fund-info-label {
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.fund-info-value {
+  color: #333;
+}
+
+.fund-detail-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+} 

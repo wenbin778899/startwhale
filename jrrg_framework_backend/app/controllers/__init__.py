@@ -2,3 +2,4 @@
 from .user_controller import user_controller
 from .stock_controller import stock_controller
 from .strategy_controller import strategy_controller
+from .fund_controller import fund_controller

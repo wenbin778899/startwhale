@@ -22,6 +22,8 @@ Flask-SQLalchemy==3.1.1
 pytest==8.3.4
 # pytest生成测试报告的插件
 pytest-testreport==1.1.6
+# 金融市场数据获取库
+akshare==1.16.96
 ####################################################################
 # 如下部分是installation章节中没有提供的，如果你之前有按照installation章节部分配置好所有环境，那么可以仅安装如下内容（当然直接通过pip install -r requirements.txt也是一样的，因为pip会自动跳过那些已经安装且与指定版本一样的库）
 # bcrypt加密库，用于对秘钥进行加密

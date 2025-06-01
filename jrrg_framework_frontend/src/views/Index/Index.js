@@ -1,4 +1,4 @@
-import { HomeOutlined, LineChartOutlined, MoneyCollectOutlined, BulbOutlined, EditOutlined, RollbackOutlined, CopyrightOutlined, GithubOutlined, UserOutlined, SettingOutlined, LogoutOutlined, IdcardOutlined, ProfileOutlined } from '@ant-design/icons';
+import { HomeOutlined, LineChartOutlined, MoneyCollectOutlined, BulbOutlined, EditOutlined, RollbackOutlined, CopyrightOutlined, GithubOutlined, UserOutlined, SettingOutlined, LogoutOutlined, IdcardOutlined, ProfileOutlined, StarOutlined } from '@ant-design/icons';
 import { Breadcrumb, Layout, Menu, Avatar, Tooltip, Dropdown } from 'antd';
 import React, { useState, useEffect } from 'react';
 import './Index.scss';
@@ -72,9 +72,11 @@ const Index = () => {
         getItem('首页', '/home', <HomeOutlined />),
         getItem('交易策略', '/strategy', <BulbOutlined />, [
             // 策略管理实际上设计策略的增删改查，但是可以将其设计成一个菜单项，页面用于显示策略列表，通过弹窗的方式来实现对策略的更改
-            getItem('策略管理', '/strategy/manage', <EditOutlined />),
+            getItem('AI股市', '/strategy/manage', <EditOutlined />),
             // 回测策略菜单项，用于切换到回测策略页面
-            getItem('回测策略', '/strategy/backtest', <RollbackOutlined />)
+            getItem('回测策略', '/strategy/backtest', <RollbackOutlined />),
+            // AI基金菜单项
+            getItem('AI基金', '/strategy/fund', <StarOutlined />)
         ]),
         getItem('股票行情', '/stock', <LineChartOutlined />),
         // 用于进行手工交易

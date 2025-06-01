@@ -12,6 +12,11 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
+[data-theme="dark"] .header {
+    background: linear-gradient(135deg, #303f9f 0%, #512da8 100%);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
 .header .title {
     flex-grow: 1;
     text-align: center;
@@ -38,11 +43,21 @@
     object-fit: contain;
 }
 
+[data-theme="dark"] .header .logo {
+    background: linear-gradient(135deg, #303f9f 0%, #512da8 100%);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
 .header .avatar {
     margin-right: 10px;
     background: rgba(255, 255, 255, 0.9);
     border: 2px solid rgba(255, 255, 255, 0.5);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+[data-theme="dark"] .header .avatar {
+    background: rgba(255, 255, 255, 0.8);
+    border-color: rgba(255, 255, 255, 0.3);
 }
 
 .header .nickname {
@@ -81,6 +96,10 @@
     background: #ffffff;
 }
 
+[data-theme="dark"] .sider {
+    background: #141414;
+}
+
 .sider-menu {
     height: 100%;
     border-right: 0;
@@ -91,9 +110,17 @@
     background: #f0f2f5;
 }
 
+[data-theme="dark"] .content-layout {
+    background: #121212;
+}
+
 .breadcrumb {
     margin: 8px 0;
     font-size: 14px;
+}
+
+[data-theme="dark"] .breadcrumb {
+    color: #d9d9d9;
 }
 
 .content {
@@ -104,10 +131,21 @@
     box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.1);
 }
 
+[data-theme="dark"] .content {
+    background: #1f1f1f;
+    box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.3);
+    color: #e6e6e6;
+}
+
 .footer {
     text-align: center;
     background: #f0f2f5;
     color: #848587;
     padding: 8px;
     font-size: 14px;
+}
+
+[data-theme="dark"] .footer {
+    background: #121212;
+    color: #a6a6a6;
 }

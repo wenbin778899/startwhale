@@ -646,7 +646,7 @@ const StrategyManage = () => {
         if (!change && change !== 0) return '-';
         const changeNum = parseFloat(change);
         return (
-          <Text type={changeNum > 0 ? 'success' : changeNum < 0 ? 'danger' : 'secondary'}>
+          <Text style={{ color: changeNum > 0 ? '#cf1322' : changeNum < 0 ? '#3f8600' : 'inherit' }}>
             {changeNum > 0 ? '+' : ''}{changeNum.toFixed(2)}
           </Text>
         );
@@ -774,7 +774,7 @@ const StrategyManage = () => {
     <div className="strategy-manage">
       <div className="strategy-manage-header">
         <Title level={2}>
-          <StarOutlined style={{ color: '#faad14' }} /> 策略管理中心
+          <StarOutlined style={{ color: '#faad14' }} /> AI助手
         </Title>
         <Paragraph type="secondary">
           管理您的自选股票，获取AI智能分析建议，制定投资策略

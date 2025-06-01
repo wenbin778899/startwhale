@@ -9,7 +9,7 @@ import traceback
 from app.models import db, FavoriteStock, AnalysisHistory
 import app.utils as utils
 
-# 创建策略管理蓝图
+# 创建AI股市蓝图
 strategy_controller = Blueprint('strategy_controller', __name__)
 
 # AI模型配置
