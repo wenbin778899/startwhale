@@ -1,0 +1,59 @@
+.portfolio-management {
+  padding: 20px 0;
+}
+
+.page-description {
+  display: block;
+  margin-bottom: 20px;
+}
+
+.action-bar {
+  margin-bottom: 20px;
+}
+
+.portfolio-summary {
+  margin-bottom: 24px;
+}
+
+.search-results {
+  margin-top: 8px;
+  border: 1px solid #e8e8e8;
+  border-radius: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+  background-color: #fff;
+}
+
+.search-results ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.search-results li {
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.search-results li:hover {
+  background-color: #f0f0f0;
+}
+
+.stock-info {
+  margin-bottom: 16px;
+}
+
+.ant-table-row:hover {
+  cursor: pointer;
+}
+
+@media (max-width: 576px) {
+  .portfolio-management {
+    padding: 10px 0;
+  }
+  
+  .ant-statistic {
+    margin-bottom: 16px;
+  }
+} 

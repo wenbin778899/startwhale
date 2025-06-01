@@ -11,6 +11,7 @@ from app.controllers import strategy_controller
 from app.controllers import fund_controller
 from app.controllers.user_profile_controller import user_profile_controller
 from app.controllers.news_controller import news_controller  # 导入新闻控制器
+from app.controllers.portfolio_controller import portfolio_controller  # 导入持仓控制器
 # 导入定义的数据库句柄
 from app.models import db
 
@@ -49,7 +50,13 @@ def create_app():
             "/user-profile/questionnaire",
             "/user-profile/profile",
             "/news/market",  # 新增的新闻接口
-            "/news/topic"    # 新增的新闻接口
+            "/news/topic",   # 新增的新闻接口
+            "/portfolio",    # 新增的持仓管理接口
+            "/portfolio/<portfolio_id>",
+            "/portfolio/<portfolio_id>/stocks",
+            "/portfolio/<portfolio_id>/trades",
+            "/portfolio/update-prices",
+            "/portfolio/statistics/daily"
         ]}
 
     # 添加/api前缀的路由重定向，以兼容前端调用
@@ -97,6 +104,7 @@ def create_app():
     app.register_blueprint(fund_controller, url_prefix='/fund')
     app.register_blueprint(user_profile_controller, url_prefix='/user-profile')
     app.register_blueprint(news_controller, url_prefix='/news')  # 注册新闻蓝图
+    app.register_blueprint(portfolio_controller, url_prefix='/portfolio')  # 注册持仓管理蓝图
 
     # 配置日志
     app = register_logger(app)

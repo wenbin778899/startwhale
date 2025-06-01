@@ -13,6 +13,7 @@ import StrategyManage from './views/Strategy/StrategyManage';
 import FundManage from './views/Fund/FundManage';
 import UserPortrait from './views/UserProfile/UserPortrait';
 import Home from './views/Home/Home';
+import PortfolioManagement from './views/Portfolio/PortfolioManagement';
 import { useNavigate } from 'react-router-dom';
 import { setNavigate } from './utils/http';
 import RequierAuth from './components/RequireAuth/RequireAuth';
@@ -48,6 +49,7 @@ function AppRoutes() {
           <Route path="/strategy/backtest" element={<div>Strategy Backtest</div>} />
           <Route path="/strategy/fund" element={<FundManage />} />
           <Route path="/stock" element={<StockQuery />} />
+          <Route path="/portfolio" element={<PortfolioManagement />} />
           <Route path="/trade" element={<div>Trade</div>} />
           <Route path="/user/profile" element={<UserProfile />} />
           <Route path="/user/detail" element={<ProfileDetail />} />

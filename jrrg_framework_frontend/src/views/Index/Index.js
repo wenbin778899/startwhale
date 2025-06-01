@@ -1,55 +1,65 @@
-import { HomeOutlined, LineChartOutlined, MoneyCollectOutlined, BulbOutlined, EditOutlined, RollbackOutlined, CopyrightOutlined, GithubOutlined, UserOutlined, SettingOutlined, LogoutOutlined, IdcardOutlined, ProfileOutlined, StarOutlined } from '@ant-design/icons';
-import { Breadcrumb, Layout, Menu, Avatar, Tooltip, Dropdown } from 'antd';
+import { HomeOutlined, LineChartOutlined, MoneyCollectOutlined, BulbOutlined, EditOutlined, RollbackOutlined, CopyrightOutlined, GithubOutlined, UserOutlined, SettingOutlined, LogoutOutlined, IdcardOutlined, ProfileOutlined, StarOutlined, WalletOutlined } from '@ant-design/icons';
+import { Breadcrumb, Layout, Menu, Avatar, Tooltip, Dropdown, Button } from 'antd';
 import React, { useState, useEffect } from 'react';
 import './Index.scss';
 // 在create-react-app中，有两种方式引入图片资源：1.对于存放在public目录下的资源，可以直接通过相对路径引入；2.对于存放在src目录下的资源（如assets），需要通过import的方式引入，然后在代码中使用，这里使用的是第2种方式，这种方式可以实现图片资源的模块化管理
 import Logo from '../../assets/img/logo.png';
 import { Outlet, useNavigate } from 'react-router-dom';
-import { $userLogout } from '../../api/userApi';
+import { $userLogout, $getCurrentUserInfo } from '../../api/userApi';
+import { message } from 'antd';
 
 
 // 定义Index页面组件
 const Index = () => {
     // 定义一个状态，用于存储用户信息
-    const [userInfo, setUserInfo] = useState({
-        nickname: localStorage.getItem('user_info') ? JSON.parse(localStorage.getItem('user_info')).nickname : "默认昵称"
-    });
+    const [userInfo, setUserInfo] = useState({ username: '', nickname: '' });
     // 定义导航对象，用于页面跳转
     const navigate = useNavigate();
+
+    // 初始化用户信息
+    useEffect(() => {
+        const fetchUserInfo = async () => {
+            try {
+                const res = await $getCurrentUserInfo();
+                if (res.code === 0) {
+                    setUserInfo(res.data);
+                } else {
+                    message.error('获取用户信息失败，请重新登录');
+                    navigate('/login');
+                }
+            } catch (error) {
+                console.error('Error fetching user info:', error);
+                message.error('网络错误，请重试');
+                navigate('/login');
+            }
+        };
+        fetchUserInfo();
+    }, [navigate]);
 
     // 定义一个事件处理函数，用于处理注销菜单项的点击事件
     const handleLogoutMenuItemClick = async (e) => {
         try {
-            // 调用登出API
-            await $userLogout();
-            // 刷新页面，返回登录页
-            window.location.reload();
+            const res = await $userLogout();
+            if (res.code === 0) {
+                message.success('注销成功');
+                navigate('/login');
+            } else {
+                message.error('注销失败，请重试');
+            }
         } catch (error) {
-            console.error("登出失败", error);
+            console.error('Error logging out:', error);
+            message.error('网络错误，请重试');
         }
     }
     // 当鼠标从用户昵称上悬停时，会显示如下的菜单项，下面也只是一个示例，具体可以根据需求进行修改
     // // TODO 演示如何创建一个新页面
     const dropdownMenuItems = [
         {
-            label: '个人资料',
-            key: 'profile',
-            icon: <UserOutlined />,
-            onClick: () => navigate('/user/detail'),
-        },
-        {
-            label: '投资者画像',
-            key: 'portrait',
-            icon: <IdcardOutlined />,
-            onClick: () => navigate('/user/portrait'),
-        },
-        {
-            label: '退出登录',
             key: 'logout',
-            icon: <LogoutOutlined />,
-            onClick: handleLogoutMenuItemClick,
-            danger: true,
-        }
+            label: (
+                <Button danger type="text" icon={<LogoutOutlined />} onClick={handleLogoutMenuItemClick}>注销</Button>
+            ),
+        },
     ];
 
 
@@ -79,6 +89,7 @@ const Index = () => {
             getItem('AI基金', '/strategy/fund', <StarOutlined />)
         ]),
         getItem('股票行情', '/stock', <LineChartOutlined />),
+        getItem('持仓管理', '/portfolio', <WalletOutlined />),
         // 用于进行手工交易
         getItem('股票交易', '/trade', <MoneyCollectOutlined />),
         getItem('个人中心', '/user', <UserOutlined />, [
