@@ -38,6 +38,8 @@ npm install
 - axios: ^0.24.0
 - echarts: ^5.2.2
 - echarts-for-react: ^3.0.2
+- moment: ^2.30.1
+- decimal.js: ^10.5.0
 
 ### 步骤 3: 配置前端环境变量
 创建 `.env` 文件在前端项目根目录下：
@@ -45,7 +47,29 @@ npm install
 REACT_APP_API_URL=http://localhost:8080
 ```
 
-### 步骤 4: 启动前端开发服务器
+### 步骤 4: 安装Moment.js
+Moment.js 是项目中用于日期和时间处理的重要依赖，确保正确安装：
+```bash
+# 在前端目录下运行
+npm install moment --save
+```
+如果需要特定版本的Moment.js（项目默认使用2.30.1版本）：
+```bash
+npm install moment@2.30.1 --save
+```
+
+### 步骤 5: 安装Decimal.js
+Decimal.js 是用于高精度数值计算的重要依赖，特别是在金融数据处理中：
+```bash
+# 在前端目录下运行
+npm install decimal.js --save
+```
+如果需要特定版本的Decimal.js（项目默认使用10.5.0版本）：
+```bash
+npm install decimal.js@10.5.0 --save
+```
+
+### 步骤 6: 启动前端开发服务器
 ```bash
 npm start
 ```

@@ -42,6 +42,8 @@
 - ECharts：数据可视化图表
 - Axios：HTTP请求处理
 - React Router：前端路由管理
+- Moment.js：日期时间处理库
+- Decimal.js：高精度数值计算库
 
 ### 后端
 - Flask：Web应用框架
@@ -93,6 +95,12 @@ cd jrrg_framework_frontend
 
 # 安装依赖
 npm install
+
+# 如果需要单独安装或升级Moment.js
+npm install moment --save
+
+# 如果需要单独安装或升级Decimal.js
+npm install decimal.js --save
 
 # 启动开发服务器
 npm start

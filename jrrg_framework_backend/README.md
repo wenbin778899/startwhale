@@ -25,6 +25,47 @@
 
    如果出现网络问题，通常是代理的问题，可以关闭或开启代理重试。（也可以换源，但是不能保证所有的数据源都有对应版本的库）。
 
+## 前端Moment.js说明
+
+本项目的前端部分使用了Moment.js库进行日期和时间处理，确保在前端项目目录下执行以下命令安装该依赖：
+
+```shell
+# 进入前端目录
+cd ../jrrg_framework_frontend
+
+# 安装moment.js
+npm install moment --save
+
+# 或者指定版本安装
+npm install moment@2.30.1 --save
+```
+
+Moment.js主要用于：
+- 日期格式化与显示
+- 时间数据排序
+- 日期计算与操作
+
+## 前端Decimal.js说明
+
+本项目的前端部分使用了Decimal.js库进行高精度数值计算，这对金融应用中的精确计算至关重要。确保在前端项目目录下执行以下命令安装该依赖：
+
+```shell
+# 进入前端目录
+cd ../jrrg_framework_frontend
+
+# 安装decimal.js
+npm install decimal.js --save
+
+# 或者指定版本安装
+npm install decimal.js@10.5.0 --save
+```
+
+Decimal.js主要用于：
+- 高精度金融计算（避免浮点数误差）
+- 股票价格和交易金额的精确计算
+- 持仓盈亏计算
+- 百分比精确计算
+
 ## 运行与部署
 
 ### 数据库配置
@@ -85,7 +126,7 @@ if __name__ == '__main__':
 
 本框架提供的接口文档示例见https://www.yuque.com/codingwang/fk202b/xw9cf0ad5gdwb7pf?singleDoc# 《接口文档示例》。
 
-你应当如示例所示格式编写接口文档，推荐直接通过“语雀”进行操作（可以多人协作）。
+你应当如示例所示格式编写接口文档，推荐直接通过"语雀"进行操作（可以多人协作）。
 
 
 
