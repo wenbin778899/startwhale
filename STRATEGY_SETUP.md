@@ -97,6 +97,24 @@ cd jrrg_framework_frontend
 npm install
 ```
 
+安装完整依赖后，确保moment.js已正确安装，该库用于交易策略中的日期时间处理：
+```bash
+# 检查moment.js是否已安装
+npm list moment
+
+# 如需重新安装或更新
+npm install moment@2.30.1 --save
+```
+
+同时，需要确保decimal.js已正确安装，该库用于交易策略中的高精度金融计算：
+```bash
+# 检查decimal.js是否已安装
+npm list decimal.js
+
+# 如需重新安装或更新
+npm install decimal.js@10.5.0 --save
+```
+
 ### 4. 启动服务
 
 后端服务：
