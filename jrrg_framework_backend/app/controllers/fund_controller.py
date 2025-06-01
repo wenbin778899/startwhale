@@ -186,17 +186,40 @@ def get_fund_info(fund_code):
                 current_app.logger.error(f"获取基金 {fund_code} 信息返回空数据或无效数据")
                 return utils.error(message="无法获取基金信息，请检查基金代码是否正确", code=400)
             
-            # 转换为字典格式
+            # 转换为字典格式，特别处理NA值
             fund_data = {}
             for _, row in fund_info.iterrows():
                 try:
-                    key = str(row['item']) if pd.notna(row['item']) else "未知项目"
-                    value = str(row['value']) if pd.notna(row['value']) else "无数据"
+                    # 使用pd.isna()和pd.isnull()函数检查NA值
+                    # 这些函数可以处理各种类型的NA值，包括None, np.nan, pd.NA等
+                    
+                    # 检查item是否为NA
+                    if pd.isna(row['item']) or pd.isnull(row['item']):
+                        key = "未知项目"
+                    else:
+                        key = str(row['item'])
+                    
+                    # 检查value是否为NA
+                    if pd.isna(row['value']) or pd.isnull(row['value']):
+                        value = "无数据"
+                    else:
+                        try:
+                            # 尝试转换为字符串
+                            value = str(row['value'])
+                        except:
+                            # 如果转换失败，使用安全的默认值
+                            value = "无法显示的数据"
+                    
                     fund_data[key] = value
                 except Exception as item_error:
                     current_app.logger.error(f"处理基金数据项出错: {str(item_error)}")
-                    # 继续处理下一项
+                    # 继续处理下一项，确保一个错误项不影响整体
                     continue
+            
+            # 检查是否有至少一个有效的数据项
+            if not fund_data:
+                current_app.logger.error(f"处理后的基金数据为空")
+                return utils.error(message="基金数据处理后为空，无法获取有效信息", code=400)
             
             current_app.logger.info(f"成功获取基金 {fund_code} 基本信息，共 {len(fund_data)} 项")
             return utils.success(data=fund_data, message="获取基金信息成功")
@@ -204,7 +227,15 @@ def get_fund_info(fund_code):
         except Exception as ak_error:
             current_app.logger.error(f"调用akshare获取基金信息失败: {str(ak_error)}")
             current_app.logger.error(traceback.format_exc())
-            return utils.error(message=f"获取基金信息失败，请检查基金代码是否正确。详细错误: {str(ak_error)[:100]}", code=400)
+            
+            # 提供更具体的错误信息
+            error_msg = str(ak_error)
+            if "NAType" in error_msg:
+                return utils.error(message="获取基金信息失败：数据格式不兼容，请稍后再试", code=400)
+            elif "timeout" in error_msg.lower():
+                return utils.error(message="获取基金信息超时，请稍后再试", code=408)
+            else:
+                return utils.error(message=f"获取基金信息失败，请检查基金代码是否正确", code=400)
             
     except Exception as e:
         current_app.logger.error(f"获取基金信息失败: {str(e)}")
@@ -312,12 +343,28 @@ def ai_fund_analysis():
             # 尝试获取基金详细信息
             try:
                 fund_info_df = ak.fund_individual_basic_info_xq(symbol=fund_code)
+                print(fund_info_df, fund_code)
                 fund_info = {}
                 for _, row in fund_info_df.iterrows():
-                    fund_info[row['item']] = row['value']
+                    # 处理NA值问题
+                    if pd.isna(row['item']) or pd.isnull(row['item']):
+                        key = "未知项目"
+                    else:
+                        key = str(row['item'])
+                        
+                    if pd.isna(row['value']) or pd.isnull(row['value']):
+                        value = "无数据"
+                    else:
+                        try:
+                            value = str(row['value'])
+                        except:
+                            value = "无法显示的数据"
+                    
+                    fund_info[key] = value
             except Exception as info_error:
                 current_app.logger.error(f"获取基金信息失败: {str(info_error)}")
                 # 获取基金信息失败不影响AI分析
+                fund_info = None
         
         # 构建Deepseek AI请求
         system_prompt = "你是一个专业的基金投资分析师，请基于用户的问题提供专业、客观的分析建议。请用中文回答，内容要详细且具有实用性。"

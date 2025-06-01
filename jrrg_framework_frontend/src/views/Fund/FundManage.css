@@ -87,4 +87,680 @@
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+/* 基金详情样式 */
+.fund-detail-container {
+  padding: 8px;
+}
+
+.fund-value-card {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s;
+}
+
+.fund-value-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.fund-info-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.info-label {
+  min-width: 80px;
+  font-weight: 500;
+  color: #666;
+  margin-right: 8px;
+}
+
+.info-value {
+  color: #333;
+}
+
+/* 增加Modal内的卡片样式 */
+.fund-detail-container .ant-card {
+  border-radius: 6px;
+  transition: all 0.3s;
+}
+
+.fund-detail-container .ant-card:hover {
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* 统计数字显示样式 */
+.fund-detail-container .ant-statistic-title {
+  font-size: 14px;
+  color: #666;
+}
+
+.fund-detail-container .ant-statistic-content {
+  font-size: 18px;
+  font-weight: bold;
+}
+
+/* 描述列表样式 */
+.fund-detail-container .ant-descriptions-bordered .ant-descriptions-item-label {
+  background-color: #fafafa;
+  padding: 12px 16px;
+}
+
+.fund-detail-container .ant-descriptions-bordered .ant-descriptions-item-content {
+  padding: 12px 16px;
+}
+
+/* 卡片标题样式 */
+.fund-detail-container .ant-card-head-title {
+  padding: 12px 0;
+  font-weight: 500;
+}
+
+/* AI基金分析 - 现代化样式 */
+.ai-card {
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+.ai-banner {
+  display: flex;
+  background: linear-gradient(135deg, #1890ff, #722ed1);
+  border-radius: 12px;
+  padding: 24px;
+  color: white;
+  position: relative;
+  overflow: hidden;
+  min-height: 180px;
+  margin-bottom: 16px;
+  flex-direction: row;
+  justify-content: space-between;
+}
+
+.ai-banner::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxkZWZzPjxwYXR0ZXJuIGlkPSJwYXR0ZXJuIiB4PSIwIiB5PSIwIiB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHBhdHRlcm5Vbml0cz0idXNlclNwYWNlT25Vc2UiIHBhdHRlcm5UcmFuc2Zvcm09InJvdGF0ZSgzMCkiPjxjaXJjbGUgY3g9IjIwIiBjeT0iMjAiIHI9IjEiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4yKSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3QgeD0iMCIgeT0iMCIgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNwYXR0ZXJuKSIvPjwvc3ZnPg==');
+  opacity: 0.5;
+}
+
+.ai-banner-content {
+  flex: 1;
+  position: relative;
+  z-index: 2;
+  max-width: 70%;
+}
+
+.ai-banner-title {
+  color: white !important;
+  margin-bottom: 16px !important;
+  font-weight: 600 !important;
+}
+
+.ai-banner-desc {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 16px;
+  max-width: 90%;
+  margin-bottom: 24px;
+}
+
+.ai-banner-button {
+  background: rgba(255, 255, 255, 0.2) !important;
+  border: none !important;
+  backdrop-filter: blur(4px);
+  transition: all 0.3s;
+}
+
+.ai-banner-button:hover {
+  background: rgba(255, 255, 255, 0.3) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+
+.ai-banner-image {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ai-robot-icon {
+  font-size: 100px;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.history-card {
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0;
+  height: 300px;
+}
+
+.history-card .ant-card-body {
+  flex: 1;
+  overflow-y: auto;
+  max-height: none;
+}
+
+.history-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.history-item {
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 8px;
+  background: white;
+  transition: all 0.3s;
+  border: 1px solid transparent;
+}
+
+.history-item:hover {
+  border-color: #1890ff;
+  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.1);
+  transform: translateY(-2px);
+}
+
+.history-item-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.history-item-desc {
+  margin-top: 4px;
+}
+
+.fund-tag {
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.ai-avatar {
+  background: linear-gradient(135deg, #1890ff, #722ed1);
+  transition: all 0.3s;
+}
+
+.history-item:hover .ai-avatar {
+  transform: scale(1.1);
+}
+
+.history-footer {
+  text-align: center;
+  padding: 12px 0;
+}
+
+.load-more-btn {
+  color: #1890ff;
+  border-radius: 20px;
+  padding: 0 16px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  transition: all 0.3s;
+}
+
+.load-more-btn:hover {
+  background: rgba(24, 144, 255, 0.1);
+  transform: translateY(-2px);
+}
+
+.gradient-button {
+  background: linear-gradient(135deg, #1890ff, #722ed1) !important;
+  border: none !important;
+  transition: all 0.3s !important;
+}
+
+.gradient-button:hover {
+  opacity: 0.9;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+
+/* AI分析模态框样式 */
+.ai-analysis-modal .ant-modal-content {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.ai-analysis-modal .ant-modal-header {
+  background: linear-gradient(135deg, #1890ff, #722ed1);
+  padding: 16px 24px;
+  border-bottom: none;
+}
+
+.ai-analysis-modal .ant-modal-title {
+  color: white;
+}
+
+.ai-analysis-modal .ant-modal-close {
+  color: white;
+}
+
+.ai-modal-title {
+  display: flex;
+  align-items: center;
+  color: white;
+  gap: 12px;
+}
+
+.ai-modal-icon {
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+}
+
+.ai-modal-tag {
+  margin-left: 12px;
+  background: rgba(255, 255, 255, 0.2) !important;
+  color: white !important;
+  border: none;
+}
+
+.context-title {
+  font-weight: 500;
+  color: #1890ff;
+}
+
+.context-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.previous-question, .previous-answer {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.question-text, .answer-text {
+  flex: 1;
+  background: #f0f2f5;
+  padding: 8px 12px;
+  border-radius: 8px;
+  position: relative;
+}
+
+.question-text::before, .answer-text::before {
+  content: '';
+  position: absolute;
+  left: -6px;
+  top: 10px;
+  width: 0;
+  height: 0;
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+  border-right: 6px solid #f0f2f5;
+}
+
+.clear-context-btn {
+  color: #ff4d4f;
+  border-color: #ff4d4f;
+}
+
+.clear-context-btn:hover {
+  color: #ff7875;
+  border-color: #ff7875;
+}
+
+.input-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.input-title {
+  font-weight: 500;
+  margin-right: 8px;
+}
+
+.selected-fund-tag {
+  background: #e6f7ff;
+}
+
+.ai-input {
+  border-radius: 8px;
+  resize: none;
+  border: 1px solid #d9d9d9;
+  transition: all 0.3s;
+}
+
+.ai-input:hover, .ai-input:focus {
+  border-color: #40a9ff;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+
+.send-btn {
+  background: linear-gradient(135deg, #1890ff, #722ed1) !important;
+  border: none !important;
+  transition: all 0.3s !important;
+}
+
+.send-btn:hover {
+  opacity: 0.9;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.continue-btn {
+  color: #722ed1;
+  border-color: #722ed1;
+}
+
+.continue-btn:hover {
+  color: #9254de;
+  border-color: #9254de;
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 0;
+  text-align: center;
+}
+
+.loading-animation {
+  margin-bottom: 16px;
+}
+
+.loading-text p {
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+
+.loading-subtext {
+  color: #888;
+  font-size: 14px;
+}
+
+.response-container {
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.response-header {
+  display: flex;
+  padding: 16px;
+  background: #f0f2f5;
+  align-items: center;
+  gap: 12px;
+}
+
+.ai-response-avatar {
+  background: linear-gradient(135deg, #1890ff, #722ed1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.response-title h5 {
+  margin-bottom: 0 !important;
+}
+
+.response-card {
+  border-radius: 0 0 12px 12px !important;
+  background: white !important;
+}
+
+.response-content {
+  padding: 4px;
+  font-size: 15px;
+  line-height: 1.8;
+  color: #333;
+}
+
+/* 左右布局的响应式调整 */
+@media (max-width: 768px) {
+  .ai-banner {
+    min-height: 200px;
+    margin-bottom: 16px;
+  }
+  
+  .ai-banner-desc {
+    max-width: 100%;
+  }
+}
+
+/* 主要卡片高度匹配 */
+.favorite-fund-card, 
+.ai-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.favorite-fund-card .ant-card-body,
+.ai-card .ant-card-body {
+  flex: 1;
+  overflow: hidden;
+  padding: 16px;
+}
+
+/* 确保表格垂直填充空间 */
+.favorite-fund-card .ant-table-wrapper {
+  height: 100%;
+}
+
+/* 响应式布局调整 */
+@media (max-width: 992px) {
+  .fund-manage .ant-col-12 {
+    width: 100%;
+  }
+  
+  .favorite-fund-card,
+  .ai-card {
+    margin-bottom: 16px;
+  }
+}
+
+/* 调整内部上下结构的间距 */
+.ai-card .ant-row {
+  display: flex;
+  flex-direction: column;
+}
+
+/* 美化自选基金模块 */
+.favorite-fund-card {
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  background: linear-gradient(to bottom, #ffffff, #f9fcff);
+}
+
+.favorite-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.favorite-icon {
+  color: #faad14;
+  font-size: 22px;
+  margin-right: 4px;
+}
+
+.favorite-badge {
+  margin-left: 8px;
+}
+
+.add-favorite-btn {
+  background: linear-gradient(135deg, #faad14, #ff7a45) !important;
+  border: none !important;
+  box-shadow: 0 2px 8px rgba(250, 173, 20, 0.3);
+  transition: all 0.3s;
+}
+
+.add-favorite-btn:hover {
+  opacity: 0.9;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(250, 173, 20, 0.4);
+}
+
+/* 表格美化 */
+.favorite-table {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.favorite-table .ant-table-thead > tr > th {
+  background-color: #f5f7fa;
+  color: #666;
+  font-weight: 500;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.favorite-table-row {
+  transition: all 0.3s;
+}
+
+.favorite-table-row:hover {
+  background-color: #f0f7ff !important;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.favorite-table .ant-btn {
+  border-radius: 4px;
+  transition: all 0.3s;
+}
+
+.favorite-table .ant-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.empty-favorite {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px 0;
+  min-height: 300px;
+  text-align: center;
+}
+
+.empty-favorite .ant-empty-description {
+  color: #888;
+}
+
+.empty-favorite .ant-empty-description p {
+  margin-bottom: 16px;
+  font-size: 16px;
+}
+
+.empty-favorite .ant-btn {
+  margin-top: 8px;
+  border-radius: 20px;
+  height: 38px;
+  padding: 0 20px;
+}
+
+/* 操作按钮样式 */
+.action-btn {
+  border-radius: 4px;
+  border: none !important;
+  transition: all 0.3s;
+  opacity: 0.9;
+}
+
+.action-btn:hover {
+  transform: translateY(-2px);
+  opacity: 1;
+}
+
+.details-btn {
+  background: linear-gradient(135deg, #1890ff, #096dd9) !important;
+}
+
+.analysis-btn {
+  background: linear-gradient(135deg, #722ed1, #531dab) !important;
+}
+
+.delete-btn {
+  background: linear-gradient(135deg, #ff4d4f, #cf1322) !important;
+  color: white !important;
+}
+
+/* 给表格内容添加鼠标悬停时的渐变背景效果 */
+.favorite-table-row:hover .action-btn {
+  opacity: 1;
+}
+
+/* 基金详情表格美化 */
+.detail-info-card {
+  margin-top: 8px;
+}
+
+.fund-detail-table {
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.detail-row {
+  display: flex;
+  border-bottom: 1px solid #f0f0f0;
+  transition: all 0.3s;
+}
+
+.detail-row:last-child {
+  border-bottom: none;
+}
+
+.detail-row:hover {
+  background-color: #f5f7ff;
+}
+
+.even-row {
+  background-color: #fff;
+}
+
+.odd-row {
+  background-color: #f9fafc;
+}
+
+.detail-label {
+  width: 30%;
+  padding: 12px 16px;
+  background-color: #fafafa;
+  font-weight: 500;
+  color: #333;
+  border-right: 1px solid #f0f0f0;
+  display: flex;
+  align-items: center;
+}
+
+.detail-value {
+  width: 70%;
+  padding: 12px 16px;
+  word-break: break-word;
+  display: flex;
+  align-items: center;
+}
+
+.detail-value span {
+  color: #555;
+}
+
+/* 适配基金详情模态框内的所有卡片样式 */
+.fund-detail-container .ant-card {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border-radius: 8px;
+  transition: all 0.3s;
+}
+
+.fund-detail-container .ant-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 } 
