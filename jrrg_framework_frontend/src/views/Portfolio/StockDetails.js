@@ -30,6 +30,9 @@ const StockDetails = ({ portfolioId, stocks = [], refreshDetail }) => {
   const [editForm] = Form.useForm();
   const [tradeForm] = Form.useForm();
 
+  // 确保stocks始终是数组
+  const safeStocks = Array.isArray(stocks) ? stocks : [];
+
   // 搜索股票
   const handleSearchStock = async (value) => {
     if (!value) return;
@@ -214,21 +217,35 @@ const StockDetails = ({ portfolioId, stocks = [], refreshDetail }) => {
       title: '盈亏金额(元)',
       dataIndex: 'profit_loss',
       key: 'profit_loss',
-      render: (value) => (
-        <span style={{ color: Number(value) >= 0 ? '#52c41a' : '#f5222d' }}>
-          {Number(value).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-        </span>
-      )
+      render: (value) => {
+        const numValue = Number(value);
+        let color = '#8c8c8c'; // 默认灰色
+        if (numValue > 0) color = '#f5222d'; // 红色表示盈利
+        else if (numValue < 0) color = '#52c41a'; // 绿色表示亏损
+        
+        return (
+          <span style={{ color }}>
+            {numValue.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </span>
+        );
+      }
     },
     {
       title: '盈亏率',
       dataIndex: 'profit_loss_rate',
       key: 'profit_loss_rate',
-      render: (value) => (
-        <Tag color={Number(value) >= 0 ? 'green' : 'red'}>
-          {(Number(value) * 100).toFixed(2)}%
-        </Tag>
-      )
+      render: (value) => {
+        const numValue = Number(value);
+        let color = 'default'; // 默认灰色
+        if (numValue > 0) color = 'red'; // 红色表示盈利
+        else if (numValue < 0) color = 'green'; // 绿色表示亏损
+        
+        return (
+          <Tag color={color}>
+            {(numValue * 100).toFixed(2)}%
+          </Tag>
+        );
+      }
     },
     {
       title: '操作',
@@ -292,7 +309,7 @@ const StockDetails = ({ portfolioId, stocks = [], refreshDetail }) => {
       </div>
 
       <Table 
-        dataSource={stocks} 
+        dataSource={safeStocks} 
         columns={columns} 
         rowKey="id" 
         pagination={false}

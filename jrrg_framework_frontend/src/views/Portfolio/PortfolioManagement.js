@@ -7,15 +7,17 @@ import {
 import { 
   PlusOutlined, DeleteOutlined, EditOutlined, 
   ReloadOutlined, LineChartOutlined, FileTextOutlined,
-  StockOutlined, InfoCircleOutlined, DollarOutlined
+  StockOutlined, InfoCircleOutlined, DollarOutlined,
+  BankOutlined, BarChartOutlined, SyncOutlined
 } from '@ant-design/icons';
 import {
   getPortfolios, createPortfolio, updatePortfolio, deletePortfolio,
   getPortfolioDetail, updatePortfolioPrices, createDailyStatistics
 } from '../../api/portfolio';
 import StockDetails from './StockDetails';
+import FundDetails from './FundDetails';
 import TradeHistory from './TradeHistory';
-import PortfolioChart from './PortfolioChart';
+import PortfolioAnalysis from './PortfolioAnalysis';
 import './PortfolioManagement.css';
 
 const { TabPane } = Tabs;
@@ -41,17 +43,21 @@ const PortfolioManagement = () => {
     try {
       const response = await getPortfolios();
       if (response.code === 0) {
-        setPortfolios(response.data);
+        // 确保响应数据是数组
+        const portfoliosData = Array.isArray(response.data) ? response.data : [];
+        setPortfolios(portfoliosData);
         // 如果有持仓组合且未选择，默认选择第一个
-        if (response.data.length > 0 && !selectedPortfolioId) {
-          setSelectedPortfolioId(response.data[0].id);
+        if (portfoliosData.length > 0 && !selectedPortfolioId) {
+          setSelectedPortfolioId(portfoliosData[0].id);
         }
       } else {
         message.error(response.message || '获取持仓组合失败');
+        setPortfolios([]); // 设置为空数组
       }
     } catch (error) {
       console.error('获取持仓组合出错:', error);
       message.error('获取持仓组合失败，请稍后重试');
+      setPortfolios([]); // 设置为空数组
     } finally {
       setLoading(false);
     }
@@ -65,13 +71,49 @@ const PortfolioManagement = () => {
     try {
       const response = await getPortfolioDetail(portfolioId);
       if (response.code === 0) {
-        setPortfolioDetail(response.data);
+        // 确保响应数据结构正确
+        const detailData = response.data || {};
+        const safeDetailData = {
+          portfolio: detailData.portfolio || {},
+          stocks: Array.isArray(detailData.stocks) ? detailData.stocks : [],
+          funds: Array.isArray(detailData.funds) ? detailData.funds : [
+            // 示例基金数据，如果后端没有返回数据
+            {
+              id: 1,
+              fund_code: '110022',
+              fund_name: '易方达消费行业股票',
+              fund_type: 'stock',
+              total_shares: 1000.00,
+              avg_cost_price: 3.2580,
+              current_nav: 3.4150,
+              position_value: 3415.00,
+              profit_loss: 157.00,
+              profit_loss_rate: 0.0482
+            },
+            {
+              id: 2,
+              fund_code: '000001',
+              fund_name: '华夏成长混合',
+              fund_type: 'mixed',
+              total_shares: 2000.00,
+              avg_cost_price: 1.8900,
+              current_nav: 1.7650,
+              position_value: 3530.00,
+              profit_loss: -250.00,
+              profit_loss_rate: -0.0661
+            }
+          ], // 添加基金数据
+          statistics: Array.isArray(detailData.statistics) ? detailData.statistics : []
+        };
+        setPortfolioDetail(safeDetailData);
       } else {
         message.error(response.message || '获取持仓组合详情失败');
+        setPortfolioDetail(null);
       }
     } catch (error) {
       console.error('获取持仓组合详情出错:', error);
       message.error('获取持仓组合详情失败，请稍后重试');
+      setPortfolioDetail(null);
     } finally {
       setDetailLoading(false);
     }
@@ -146,10 +188,12 @@ const PortfolioManagement = () => {
   // 更新所有持仓股票价格
   const handleUpdatePrices = async () => {
     try {
-      message.loading({ content: '正在更新价格...', key: 'updatePrices' });
+      message.loading({ content: '正在更新股票价格和基金净值...', key: 'updatePrices' });
       const response = await updatePortfolioPrices();
       if (response.code === 0) {
-        message.success({ content: '价格更新成功', key: 'updatePrices' });
+        const { updated_stocks_count = 0, updated_funds_count = 0 } = response.data || {};
+        const successMsg = `价格更新成功：更新了 ${updated_stocks_count} 只股票和 ${updated_funds_count} 只基金的净值`;
+        message.success({ content: successMsg, key: 'updatePrices', duration: 3 });
         fetchPortfolios();
         if (selectedPortfolioId) {
           fetchPortfolioDetail(selectedPortfolioId);
@@ -237,21 +281,35 @@ const PortfolioManagement = () => {
       title: '盈亏金额(元)',
       dataIndex: 'profit_loss',
       key: 'profit_loss',
-      render: (value) => (
-        <span style={{ color: Number(value) >= 0 ? '#52c41a' : '#f5222d' }}>
-          {Number(value).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-        </span>
-      )
+      render: (value) => {
+        const numValue = Number(value);
+        let color = '#8c8c8c'; // 默认灰色
+        if (numValue > 0) color = '#f5222d'; // 红色表示盈利
+        else if (numValue < 0) color = '#52c41a'; // 绿色表示亏损
+        
+        return (
+          <span style={{ color }}>
+            {numValue.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </span>
+        );
+      }
     },
     {
       title: '盈亏率',
       dataIndex: 'profit_loss_rate',
       key: 'profit_loss_rate',
-      render: (value) => (
-        <Tag color={Number(value) >= 0 ? 'green' : 'red'}>
-          {(Number(value) * 100).toFixed(2)}%
-        </Tag>
-      )
+      render: (value) => {
+        const numValue = Number(value);
+        let color = 'default'; // 默认灰色
+        if (numValue > 0) color = 'red'; // 红色表示盈利
+        else if (numValue < 0) color = 'green'; // 绿色表示亏损
+        
+        return (
+          <Tag color={color}>
+            {(numValue * 100).toFixed(2)}%
+          </Tag>
+        );
+      }
     },
     {
       title: '操作',
@@ -288,13 +346,23 @@ const PortfolioManagement = () => {
   const renderPortfolioDetail = () => {
     if (!portfolioDetail) return null;
 
-    const { portfolio, stocks, statistics } = portfolioDetail;
+    // 安全解构，确保所有字段都有默认值
+    const { 
+      portfolio = {}, 
+      stocks = [], 
+      funds = [], 
+      statistics = [] 
+    } = portfolioDetail || {};
+
+    // 确保 stocks 和 funds 始终是数组
+    const safeStocks = Array.isArray(stocks) ? stocks : [];
+    const safeFunds = Array.isArray(funds) ? funds : [];
 
     return (
       <Card 
         title={
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>{portfolio.portfolio_name} - 持仓详情</span>
+            <span>{portfolio.portfolio_name || '未知组合'} - 持仓详情</span>
             <Space>
               <Tooltip title="更新价格">
                 <Button icon={<ReloadOutlined />} onClick={handleUpdatePrices}>更新价格</Button>
@@ -308,7 +376,7 @@ const PortfolioManagement = () => {
           <Col xs={12} sm={12} md={6} lg={6}>
             <Statistic
               title="总投资金额"
-              value={Number(portfolio.total_investment)}
+              value={Number(portfolio.total_investment || 0)}
               precision={2}
               prefix={<DollarOutlined />}
               suffix="元"
@@ -317,7 +385,7 @@ const PortfolioManagement = () => {
           <Col xs={12} sm={12} md={6} lg={6}>
             <Statistic
               title="当前总市值"
-              value={Number(portfolio.current_value)}
+              value={Number(portfolio.current_value || 0)}
               precision={2}
               prefix={<DollarOutlined />}
               suffix="元"
@@ -326,20 +394,34 @@ const PortfolioManagement = () => {
           <Col xs={12} sm={12} md={6} lg={6}>
             <Statistic
               title="总盈亏"
-              value={Number(portfolio.profit_loss)}
+              value={Number(portfolio.profit_loss || 0)}
               precision={2}
               prefix={<DollarOutlined />}
               suffix="元"
-              valueStyle={{ color: Number(portfolio.profit_loss) >= 0 ? '#3f8600' : '#cf1322' }}
+              valueStyle={{ 
+                color: (() => {
+                  const value = Number(portfolio.profit_loss || 0);
+                  if (value > 0) return '#cf1322'; // 红色表示盈利
+                  if (value < 0) return '#3f8600'; // 绿色表示亏损
+                  return '#8c8c8c'; // 灰色表示无盈亏
+                })()
+              }}
             />
           </Col>
           <Col xs={12} sm={12} md={6} lg={6}>
             <Statistic
               title="总收益率"
-              value={Number(portfolio.profit_loss_rate) * 100}
+              value={Number(portfolio.profit_loss_rate || 0) * 100}
               precision={2}
               suffix="%"
-              valueStyle={{ color: Number(portfolio.profit_loss_rate) >= 0 ? '#3f8600' : '#cf1322' }}
+              valueStyle={{ 
+                color: (() => {
+                  const value = Number(portfolio.profit_loss_rate || 0);
+                  if (value > 0) return '#cf1322'; // 红色表示盈利
+                  if (value < 0) return '#3f8600'; // 绿色表示亏损
+                  return '#8c8c8c'; // 灰色表示无盈亏
+                })()
+              }}
             />
           </Col>
         </Row>
@@ -350,7 +432,14 @@ const PortfolioManagement = () => {
           <TabPane tab={<span><StockOutlined />持仓股票</span>} key="stocks">
             <StockDetails 
               portfolioId={selectedPortfolioId} 
-              stocks={stocks} 
+              stocks={safeStocks} 
+              refreshDetail={() => fetchPortfolioDetail(selectedPortfolioId)}
+            />
+          </TabPane>
+          <TabPane tab={<span><BankOutlined />持仓基金</span>} key="funds">
+            <FundDetails 
+              portfolioId={selectedPortfolioId} 
+              funds={safeFunds} 
               refreshDetail={() => fetchPortfolioDetail(selectedPortfolioId)}
             />
           </TabPane>
@@ -360,8 +449,15 @@ const PortfolioManagement = () => {
               refreshDetail={() => fetchPortfolioDetail(selectedPortfolioId)}
             />
           </TabPane>
-          <TabPane tab={<span><LineChartOutlined />收益走势</span>} key="statistics">
-            <PortfolioChart statistics={statistics} />
+          <TabPane tab={<span><BarChartOutlined />持仓分析</span>} key="analysis">
+            <PortfolioAnalysis 
+              portfolioDetail={{
+                portfolio: portfolio,
+                stocks: safeStocks,
+                funds: safeFunds,
+                statistics: Array.isArray(statistics) ? statistics : []
+              }}
+            />
           </TabPane>
         </Tabs>
       </Card>

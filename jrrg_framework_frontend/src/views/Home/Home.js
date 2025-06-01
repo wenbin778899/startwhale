@@ -17,7 +17,8 @@ import {
   Empty,
   message,
   Tooltip,
-  Radio
+  Radio,
+  Modal
 } from 'antd';
 import {
   RiseOutlined,
@@ -31,13 +32,15 @@ import {
   BulbOutlined,
   InfoCircleOutlined,
   ReloadOutlined,
-  LinkOutlined
+  LinkOutlined,
+  FullscreenOutlined,
+  FullscreenExitOutlined
 } from '@ant-design/icons';
 import ReactECharts from 'echarts-for-react';
 import './Home.css';
 import { useNavigate } from 'react-router-dom';
 import { getMarketNews } from '../../api/news'; // 导入获取市场资讯的API
-import { getMarketIndexes, getMarketTrend } from '../../api/stock'; // 导入获取指数和走势的API
+import { getMarketIndexes, getMarketTrend, getHotStocks } from '../../api/stock'; // 导入获取指数和走势的API
 
 const { Title, Text, Paragraph, Link } = Typography;
 
@@ -63,6 +66,8 @@ const Home = () => {
   const [recommendedStocks, setRecommendedStocks] = useState([]);
   const [newsData, setNewsData] = useState([]);  // 新添加的新闻数据状态
   const [newsLoading, setNewsLoading] = useState(true);  // 新闻加载状态
+  const [hotStocksLoading, setHotStocksLoading] = useState(false); // 热门股票加载状态
+  const [isHeatmapFullscreen, setIsHeatmapFullscreen] = useState(false); // 热力图全屏状态
   const navigate = useNavigate();
 
   // 获取市场新闻数据
@@ -230,6 +235,60 @@ const Home = () => {
     });
   };
 
+  // 获取热门股票数据
+  const fetchHotStocks = async (timePeriod = 'CNHOUR12') => {
+    try {
+      setHotStocksLoading(true);
+      console.log(`开始获取热门股票数据: timePeriod=${timePeriod}`);
+      const response = await getHotStocks(timePeriod);
+      
+      if (response && response.code === 0 && response.data) {
+        const stocksData = response.data.stocks || [];
+        console.log(`成功获取${stocksData.length}只热门股票`);
+        
+        // 转换数据格式以适配表格
+        const formattedStocks = stocksData.map((stock, index) => ({
+          key: index,
+          name: stock.name,
+          rate: stock.rate,
+          rate_display: stock.rate_display
+        }));
+        
+        setHotStocks(formattedStocks);
+        
+        if (response.data.fallback) {
+          message.info('使用备用热门股票数据');
+        } else {
+          message.success(`成功更新${stocksData.length}只热门股票`);
+        }
+      } else {
+        console.error('获取热门股票数据失败:', response ? response.message : '未知错误');
+        // 使用备用数据
+        setHotStocks([
+          { key: 0, name: '贵州茅台', rate: 8.5, rate_display: '+8.50%' },
+          { key: 1, name: '五粮液', rate: 7.2, rate_display: '+7.20%' },
+          { key: 2, name: '中国平安', rate: 6.8, rate_display: '+6.80%' },
+          { key: 3, name: '宁德时代', rate: 6.3, rate_display: '+6.30%' },
+          { key: 4, name: '紫金矿业', rate: 5.9, rate_display: '+5.90%' }
+        ]);
+        message.error('获取热门股票失败，使用备用数据');
+      }
+    } catch (error) {
+      console.error('获取热门股票数据出错:', error);
+      // 使用备用数据
+      setHotStocks([
+        { key: 0, name: '贵州茅台', rate: 8.5, rate_display: '+8.50%' },
+        { key: 1, name: '五粮液', rate: 7.2, rate_display: '+7.20%' },
+        { key: 2, name: '中国平安', rate: 6.8, rate_display: '+6.80%' },
+        { key: 3, name: '宁德时代', rate: 6.3, rate_display: '+6.30%' },
+        { key: 4, name: '紫金矿业', rate: 5.9, rate_display: '+5.90%' }
+      ]);
+      message.error('获取热门股票失败，使用备用数据');
+    } finally {
+      setHotStocksLoading(false);
+    }
+  };
+
   // 模拟加载数据
   useEffect(() => {
     // 获取三大指数实时数据
@@ -241,17 +300,10 @@ const Home = () => {
     // 获取组合走势数据（预加载）
     fetchCombinedTrendData('1y');
     
+    // 获取热门股票数据
+    fetchHotStocks();
+    
     setTimeout(() => {
-      // 模拟热门股票数据
-      setHotStocks([
-        { code: '600519', name: '贵州茅台', price: 1432.50, change: 2.35, volume: 1245324 },
-        { code: '000858', name: '五粮液', price: 176.23, change: -0.89, volume: 896523 },
-        { code: '601318', name: '中国平安', price: 53.47, change: 1.24, volume: 3521458 },
-        { code: '600276', name: '恒瑞医药', price: 32.45, change: -1.23, volume: 1542368 },
-        { code: '300750', name: '宁德时代', price: 254.67, change: 3.56, volume: 895623 },
-        { code: '601899', name: '紫金矿业', price: 10.34, change: 0.87, volume: 4856239 }
-      ]);
-
       // 模拟推荐股票数据
       setRecommendedStocks([
         { code: '600036', name: '招商银行', reason: '业绩超预期，分红率提升', change: 1.23 },
@@ -430,64 +482,6 @@ const Home = () => {
         }
       };
     }
-  };
-
-  // 获取行业分布图表配置
-  const getSectorChartOption = () => {
-    return {
-      title: {
-        text: '市场热度分布',
-        left: 'center',
-        textStyle: {
-          fontSize: 14
-        }
-      },
-      tooltip: {
-        trigger: 'item',
-        formatter: '{a} <br/>{b}: {c} ({d}%)'
-      },
-      legend: {
-        bottom: 0,
-        left: 'center',
-        data: ['金融', '科技', '医药', '消费', '能源', '制造', '其他']
-      },
-      series: [
-        {
-          name: '行业分布',
-          type: 'pie',
-          radius: ['40%', '60%'],
-          avoidLabelOverlap: false,
-          itemStyle: {
-            borderRadius: 10,
-            borderColor: '#fff',
-            borderWidth: 2
-          },
-          label: {
-            show: false,
-            position: 'center'
-          },
-          emphasis: {
-            label: {
-              show: true,
-              fontSize: '18',
-              fontWeight: 'bold'
-            }
-          },
-          labelLine: {
-            show: false
-          },
-          data: [
-            { value: 25, name: '金融' },
-            { value: 20, name: '科技' },
-            { value: 18, name: '医药' },
-            { value: 15, name: '消费' },
-            { value: 10, name: '能源' },
-            { value: 8, name: '制造' },
-            { value: 4, name: '其他' }
-          ]
-        }
-      ]
-    };
   };
 
   // 获取组合指数图表配置
@@ -682,54 +676,19 @@ const Home = () => {
   // 表格列定义
   const stockColumns = [
     {
-      title: '股票代码',
-      dataIndex: 'code',
-      key: 'code',
-      render: (text) => <Button type="link" onClick={() => navigate(`/stock?code=${text}`)}>{text}</Button>
-    },
-    {
       title: '股票名称',
       dataIndex: 'name',
-      key: 'name'
+      key: 'name',
+      render: (text) => <Text strong>{text}</Text>
     },
     {
-      title: '最新价',
-      dataIndex: 'price',
-      key: 'price',
-      render: (price) => `¥${price.toFixed(2)}`
-    },
-    {
-      title: '涨跌幅',
-      dataIndex: 'change',
-      key: 'change',
-      render: (change) => (
-        <Text type={change > 0 ? 'success' : 'danger'}>
-          {change > 0 ? '+' : ''}{change.toFixed(2)}%
-          {change > 0 ? <ArrowUpOutlined /> : <ArrowDownOutlined />}
-        </Text>
-      )
-    },
-    {
-      title: '成交量',
-      dataIndex: 'volume',
-      key: 'volume',
-      render: (volume) => {
-        if (volume >= 1000000) {
-          return `${(volume / 1000000).toFixed(2)}M`;
-        } else {
-          return `${(volume / 1000).toFixed(0)}K`;
-        }
-      }
-    },
-    {
-      title: '操作',
-      key: 'action',
-      render: (_, record) => (
-        <Space>
-          <Button type="primary" size="small" onClick={() => navigate(`/stock?code=${record.code}`)}>
-            详情
-          </Button>
-        </Space>
+      title: '人气指数',
+      dataIndex: 'rate',
+      key: 'rate',
+      render: (rate, record) => (
+        <Tag color={rate > 0 ? 'red' : rate < 0 ? 'green' : 'default'}>
+          {record.rate_display || `${rate.toFixed(2)}%`}
+        </Tag>
       )
     }
   ];
@@ -757,19 +716,24 @@ const Home = () => {
             hoverable 
             className="index-card shanghai-card"
             onClick={() => navigateToIndex(marketData.shanghai.code)}
+            style={{ 
+              backgroundColor: '#e6f7ff',
+              borderColor: '#40a9ff',
+              minHeight: '120px'
+            }}
           >
             <Statistic
-              title={<span className="index-title">上证指数</span>}
+              title={<span className="index-title" style={{ color: marketData.shanghai.change >= 0 ? '#cf1322' : '#3f8600' }}>上证指数</span>}
               value={marketData.shanghai.index}
               precision={2}
               valueStyle={{ 
                 color: marketData.shanghai.change >= 0 ? '#cf1322' : '#3f8600',
-                fontSize: '24px',
+                fontSize: '20px',
                 fontWeight: 'bold'
               }}
               prefix={marketData.shanghai.change >= 0 ? <RiseOutlined /> : <FallOutlined />}
               suffix={
-                <Text style={{ fontSize: 16, color: marketData.shanghai.change >= 0 ? '#cf1322' : '#3f8600' }}>
+                <Text style={{ fontSize: 14, color: marketData.shanghai.change >= 0 ? '#cf1322' : '#3f8600' }}>
                   {marketData.shanghai.change >= 0 ? '+' : ''}{marketData.shanghai.change.toFixed(2)} ({marketData.shanghai.changePercent.toFixed(2)}%)
                 </Text>
               }
@@ -782,19 +746,24 @@ const Home = () => {
             hoverable 
             className="index-card shenzhen-card"
             onClick={() => navigateToIndex(marketData.shenzhen.code)}
+            style={{ 
+              backgroundColor: '#f6ffed',
+              borderColor: '#52c41a',
+              minHeight: '120px'
+            }}
           >
             <Statistic
-              title={<span className="index-title">深证成指</span>}
+              title={<span className="index-title" style={{ color: marketData.shenzhen.change >= 0 ? '#cf1322' : '#3f8600' }}>深证成指</span>}
               value={marketData.shenzhen.index}
               precision={2}
               valueStyle={{ 
                 color: marketData.shenzhen.change >= 0 ? '#cf1322' : '#3f8600',
-                fontSize: '24px',
+                fontSize: '20px',
                 fontWeight: 'bold'
               }}
               prefix={marketData.shenzhen.change >= 0 ? <RiseOutlined /> : <FallOutlined />}
               suffix={
-                <Text style={{ fontSize: 16, color: marketData.shenzhen.change >= 0 ? '#cf1322' : '#3f8600' }}>
+                <Text style={{ fontSize: 14, color: marketData.shenzhen.change >= 0 ? '#cf1322' : '#3f8600' }}>
                   {marketData.shenzhen.change >= 0 ? '+' : ''}{marketData.shenzhen.change.toFixed(2)} ({marketData.shenzhen.changePercent.toFixed(2)}%)
                 </Text>
               }
@@ -807,19 +776,24 @@ const Home = () => {
             hoverable 
             className="index-card chuangye-card"
             onClick={() => navigateToIndex(marketData.chuangye.code)}
+            style={{ 
+              backgroundColor: '#fff2e8',
+              borderColor: '#fa8c16',
+              minHeight: '120px'
+            }}
           >
             <Statistic
-              title={<span className="index-title">创业板指</span>}
+              title={<span className="index-title" style={{ color: marketData.chuangye.change >= 0 ? '#cf1322' : '#3f8600' }}>创业板指</span>}
               value={marketData.chuangye.index}
               precision={2}
               valueStyle={{ 
                 color: marketData.chuangye.change >= 0 ? '#cf1322' : '#3f8600',
-                fontSize: '24px',
+                fontSize: '20px',
                 fontWeight: 'bold'
               }}
               prefix={marketData.chuangye.change >= 0 ? <RiseOutlined /> : <FallOutlined />}
               suffix={
-                <Text style={{ fontSize: 16, color: marketData.chuangye.change >= 0 ? '#cf1322' : '#3f8600' }}>
+                <Text style={{ fontSize: 14, color: marketData.chuangye.change >= 0 ? '#cf1322' : '#3f8600' }}>
                   {marketData.chuangye.change >= 0 ? '+' : ''}{marketData.chuangye.change.toFixed(2)} ({marketData.chuangye.changePercent.toFixed(2)}%)
                 </Text>
               }
@@ -828,22 +802,23 @@ const Home = () => {
         </Col>
       </Row>
 
-      {/* 市场趋势 */}
+      {/* 市场趋势与热力图 */}
       <Row gutter={[16, 16]} style={{ marginTop: 24 }}>
-        <Col xs={24} md={16}>
+        <Col xs={24} md={12}>
           <Card 
             title={
               <div className="card-title-with-icon">
                 <LineChartOutlined /> 市场走势
               </div>
-            } 
+            }
             extra={
               <Space>
                 <Button 
                   type={showCombined ? "primary" : "default"} 
                   onClick={toggleDisplayMode}
+                  size="small"
                 >
-                  {showCombined ? "单指数视图" : "对比视图"}
+                  {showCombined ? "单指数" : "对比"}
                 </Button>
                 <Button 
                   type="link" 
@@ -852,39 +827,40 @@ const Home = () => {
                 />
               </Space>
             }
+            style={{ height: '500px' }}
           >
-            <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 {!showCombined && (
-                  <Radio.Group value={currentIndex} onChange={(e) => handleIndexChange(e.target.value)} buttonStyle="solid">
-                    <Radio.Button value="000001">上证指数</Radio.Button>
-                    <Radio.Button value="399001">深证成指</Radio.Button>
-                    <Radio.Button value="399006">创业板指</Radio.Button>
+                  <Radio.Group value={currentIndex} onChange={(e) => handleIndexChange(e.target.value)} buttonStyle="solid" size="small">
+                    <Radio.Button value="000001">上证</Radio.Button>
+                    <Radio.Button value="399001">深证</Radio.Button>
+                    <Radio.Button value="399006">创业板</Radio.Button>
                   </Radio.Group>
                 )}
               </div>
               <div>
-                <Radio.Group value={trendPeriod} onChange={handlePeriodChange} buttonStyle="solid">
-                  <Radio.Button value="3m">三个月</Radio.Button>
-                  <Radio.Button value="1y">一年</Radio.Button>
-                  <Radio.Button value="5y">五年</Radio.Button>
+                <Radio.Group value={trendPeriod} onChange={handlePeriodChange} buttonStyle="solid" size="small">
+                  <Radio.Button value="3m">3月</Radio.Button>
+                  <Radio.Button value="1y">1年</Radio.Button>
+                  <Radio.Button value="5y">5年</Radio.Button>
                 </Radio.Group>
               </div>
             </div>
             
             {showCombined ? (
-              <Skeleton loading={combinedTrendLoading} active paragraph={{ rows: 10 }}>
+              <Skeleton loading={combinedTrendLoading} active paragraph={{ rows: 8 }}>
                 <ReactECharts
                   option={getCombinedChartOption()}
-                  style={{ height: '350px' }}
+                  style={{ height: '400px' }}
                   className="echarts-for-react"
                 />
               </Skeleton>
             ) : (
-              <Skeleton loading={trendLoading} active paragraph={{ rows: 10 }}>
+              <Skeleton loading={trendLoading} active paragraph={{ rows: 8 }}>
                 <ReactECharts
                   option={getIndexChartOption()}
-                  style={{ height: '350px' }}
+                  style={{ height: '400px' }}
                   className="echarts-for-react"
                 />
               </Skeleton>
@@ -892,30 +868,63 @@ const Home = () => {
           </Card>
         </Col>
         
-        <Col xs={24} md={8}>
+        <Col xs={24} md={12}>
           <Card 
             title={
               <div className="card-title-with-icon">
-                <BarChartOutlined /> 热点板块
+                <BarChartOutlined /> 市场热力 <Text type="secondary" style={{fontSize: '12px'}}>(大盘云图)</Text>
               </div>
-            } 
-            extra={<Button type="link" icon={<ReloadOutlined />} onClick={() => setLoading(true)} />} 
-            className="hot-sectors"
+            }
+            extra={
+              <Space>
+                <Tooltip title="全屏查看">
+                  <Button 
+                    type="link" 
+                    icon={<FullscreenOutlined />} 
+                    onClick={() => setIsHeatmapFullscreen(true)} 
+                  />
+                </Tooltip>
+                <Tooltip title="刷新页面">
+                  <Button 
+                    type="link" 
+                    icon={<ReloadOutlined />} 
+                    onClick={() => {
+                      // 刷新iframe
+                      const iframe = document.getElementById('heatmap-iframe');
+                      if (iframe) {
+                        iframe.src = iframe.src;
+                      }
+                      message.success('热力图已刷新');
+                    }} 
+                  />
+                </Tooltip>
+              </Space>
+            }
+            bodyStyle={{ padding: '4px', height: '440px' }}
+            style={{ height: '500px' }}
           >
-            <Skeleton loading={loading} active paragraph={{ rows: 10 }}>
-              <ReactECharts
-                option={getSectorChartOption()}
-                style={{ height: '350px' }}
-                className="echarts-for-react"
+            <div style={{ height: '100%', border: '1px solid #d9d9d9', borderRadius: '6px', overflow: 'hidden' }}>
+              <iframe
+                id="heatmap-iframe"
+                src="https://dapanyuntu.com/"
+                style={{
+                  width: '166.67%',
+                  height: '166.67%',
+                  border: 'none',
+                  transform: 'scale(0.6)',
+                  transformOrigin: '0 0'
+                }}
+                title="市场热力 - 大盘云图全屏模式"
+                sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
               />
-            </Skeleton>
+            </div>
           </Card>
         </Col>
       </Row>
 
-      {/* 市场资讯 */}
+      {/* 市场资讯、热门股票和AI推荐 */}
       <Row gutter={[16, 16]} style={{ marginTop: 24 }}>
-        <Col xs={24}>
+        <Col xs={24} lg={8}>
           <Card
             className="market-news-card"
             title={
@@ -933,6 +942,8 @@ const Home = () => {
                 刷新
               </Button>
             }
+            style={{ height: '500px' }}
+            bodyStyle={{ height: '440px', overflowY: 'auto', padding: '16px' }}
           >
             {newsLoading ? (
               <Skeleton active paragraph={{ rows: 6 }} />
@@ -941,34 +952,64 @@ const Home = () => {
                 itemLayout="vertical"
                 dataSource={newsData}
                 pagination={{
-                  pageSize: 5,
-                  showSizeChanger: true,
-                  pageSizeOptions: ['5', '10'],
-                  showTotal: (total) => `共 ${total} 条新闻`
+                  pageSize: 3,
+                  showSizeChanger: false,
+                  showTotal: (total) => `共 ${total} 条新闻`,
+                  size: 'small'
                 }}
                 renderItem={(news) => (
                   <List.Item
                     key={news.title + (news.publish_time || '')}
-                    actions={[]}
+                    actions={[
+                      <Space key="source-info">
+                        <Text type="secondary" style={{ fontSize: '12px' }}>
+                          {news.source || '财新网'}
+                        </Text>
+                        {news.interval_time && (
+                          <Text type="secondary" style={{ fontSize: '12px' }}>
+                            {news.interval_time}
+                          </Text>
+                        )}
+                        {news.publish_time && (
+                          <Text type="secondary" style={{ fontSize: '12px' }}>
+                            {news.publish_time}
+                          </Text>
+                        )}
+                      </Space>
+                    ]}
                     extra={
-                      <Button 
-                        type="primary" 
-                        icon={<LinkOutlined />} 
-                        href={news.link} 
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        阅读原文
-                      </Button>
+                      news.link && (
+                        <Button 
+                          type="primary" 
+                          icon={<LinkOutlined />} 
+                          href={news.link} 
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          size="small"
+                        >
+                          阅读
+                        </Button>
+                      )
                     }
                   >
                     <List.Item.Meta
                       title={
-                        <div style={{ fontSize: '16px', fontWeight: 'bold' }}>
-                          <Link href={news.link} target="_blank" rel="noopener noreferrer">
-                            {news.title}
-                          </Link>
+                        <div style={{ fontSize: '14px', fontWeight: 'bold' }}>
+                          {news.link ? (
+                            <Link href={news.link} target="_blank" rel="noopener noreferrer">
+                              {news.title}
+                            </Link>
+                          ) : (
+                            news.title
+                          )}
                         </div>
+                      }
+                      description={
+                        news.summary && (
+                          <Text type="secondary" style={{ fontSize: '12px' }}>
+                            {news.summary.length > 60 ? news.summary.substring(0, 60) + '...' : news.summary}
+                          </Text>
+                        )
                       }
                     />
                   </List.Item>
@@ -982,34 +1023,38 @@ const Home = () => {
             )}
           </Card>
         </Col>
-      </Row>
-
-      {/* 热门股票和AI推荐 */}
-      <Row gutter={[16, 16]} style={{ marginTop: 24 }}>
-        <Col xs={24} lg={16}>
+        
+        <Col xs={24} lg={8}>
           <Card 
             title={
               <div className="card-title-with-icon">
-                <FireOutlined /> 热门股票
+                <FireOutlined /> 热门股票 <Text type="secondary" style={{fontSize: '12px'}}>(微博舆情)</Text>
               </div>
             }
             extra={
               <Button 
                 type="link" 
-                icon={<ReloadOutlined spin={loading} />}
-                onClick={() => setLoading(true)}
-                disabled={loading}
+                icon={<ReloadOutlined spin={hotStocksLoading} />}
+                onClick={() => fetchHotStocks()}
+                disabled={hotStocksLoading}
               >
                 刷新
               </Button>
             }
+            style={{ height: '500px' }}
+            bodyStyle={{ height: '440px', overflowY: 'auto', padding: '16px' }}
           >
-            <Skeleton loading={loading} active>
+            <Skeleton loading={hotStocksLoading || loading} active>
               <Table
                 dataSource={hotStocks}
                 columns={stockColumns}
-                rowKey="code"
-                pagination={false}
+                rowKey="key"
+                pagination={{
+                  pageSize: 6,
+                  showSizeChanger: false,
+                  showTotal: (total) => `共 ${total} 只热门股票`,
+                  size: 'small'
+                }}
                 size="small"
                 rowClassName={() => 'stock-table-row'}
               />
@@ -1033,6 +1078,8 @@ const Home = () => {
               </Button>
             }
             className="ai-recommend-card"
+            style={{ height: '500px' }}
+            bodyStyle={{ height: '440px', overflowY: 'auto', padding: '16px' }}
           >
             <Skeleton loading={loading} active paragraph={{ rows: 6 }}>
               <List
@@ -1041,20 +1088,20 @@ const Home = () => {
                 renderItem={(item) => (
                   <List.Item>
                     <List.Item.Meta
-                      avatar={<Avatar className="stock-avatar">{item.name.substring(0, 1)}</Avatar>}
+                      avatar={<Avatar className="stock-avatar" size="small">{item.name.substring(0, 1)}</Avatar>}
                       title={
                         <Space>
-                          <Text strong>{item.name}</Text>
-                          <Text code>{item.code}</Text>
-                          <Tag color={item.change > 0 ? "red" : "green"}>
+                          <Text strong style={{ fontSize: '14px' }}>{item.name}</Text>
+                          <Text code style={{ fontSize: '12px' }}>{item.code}</Text>
+                          <Tag color={item.change > 0 ? "red" : "green"} size="small">
                             {item.change > 0 ? "+" : ""}{item.change.toFixed(2)}%
                           </Tag>
                         </Space>
                       }
                       description={
                         <div>
-                          <Tag icon={<BulbOutlined />} color="processing">推荐理由</Tag>
-                          <Text>{item.reason}</Text>
+                          <Tag icon={<BulbOutlined />} color="processing" size="small">推荐理由</Tag>
+                          <Text style={{ fontSize: '12px' }}>{item.reason}</Text>
                         </div>
                       }
                     />
@@ -1077,6 +1124,53 @@ const Home = () => {
           </Card>
         </Col>
       </Row>
+      
+      {/* 大盘云图全屏模态框 */}
+      <Modal
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span>
+              <BarChartOutlined style={{ marginRight: 8 }} />
+              市场热力 - 大盘云图
+            </span>
+            <Button 
+              type="link" 
+              icon={<FullscreenExitOutlined />} 
+              onClick={() => setIsHeatmapFullscreen(false)}
+            >
+              退出全屏
+            </Button>
+          </div>
+        }
+        open={isHeatmapFullscreen}
+        onCancel={() => setIsHeatmapFullscreen(false)}
+        footer={null}
+        width="100vw"
+        style={{ 
+          top: 0, 
+          paddingBottom: 0,
+          maxWidth: 'none'
+        }}
+        bodyStyle={{ 
+          height: 'calc(100vh - 110px)', 
+          padding: 0,
+          overflow: 'hidden'
+        }}
+        destroyOnClose={false}
+      >
+        <iframe
+          src="https://dapanyuntu.com/"
+          style={{
+            width: '166.67%',
+            height: '166.67%',
+            border: 'none',
+            transform: 'scale(0.6)',
+            transformOrigin: '0 0'
+          }}
+          title="市场热力 - 大盘云图全屏模式"
+          sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+        />
+      </Modal>
     </div>
   );
 };

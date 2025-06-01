@@ -11,6 +11,11 @@ import pandas as pd
 
 from app.models import db, FavoriteFund, FundAnalysisHistory
 import app.utils as utils
+from app.models.fund import PortfolioFund, FundTradeRecord
+from app.models.portfolio import UserPortfolio
+from app.services.fund_service import FundService
+from decimal import Decimal
+from datetime import datetime
 
 # 创建AI基金蓝图
 fund_controller = Blueprint('fund_controller', __name__)
@@ -565,3 +570,380 @@ def save_fund_analysis_history():
         db.session.rollback()
         current_app.logger.error(f"保存基金分析历史记录失败: {str(e)}")
         return utils.error(message=f"保存基金分析历史记录失败: {str(e)}", code=500)
+
+@fund_controller.route('/portfolio/<int:portfolio_id>/funds', methods=['GET'])
+@jwt_required()
+def get_portfolio_funds(portfolio_id):
+    """
+    获取指定持仓组合的基金列表
+    """
+    try:
+        user_id = get_jwt_identity()
+        
+        # 检查持仓是否属于该用户
+        portfolio = UserPortfolio.query.filter_by(id=portfolio_id, user_id=user_id).first()
+        if not portfolio:
+            return utils.error(message='持仓组合不存在或无权访问', code=404, status=404)
+        
+        # 获取持仓基金列表
+        funds = PortfolioFund.query.filter_by(portfolio_id=portfolio_id).all()
+        fund_list = []
+        
+        for fund in funds:
+            fund_dict = fund.to_dict()
+            # 转换数据类型以便前端使用
+            fund_dict['avg_cost_price'] = fund_dict['avg_cost_nav']  # 兼容前端字段名
+            fund_dict['current_nav'] = fund_dict['current_nav']
+            fund_list.append(fund_dict)
+        
+        return utils.success(
+            data=fund_list,
+            message='获取基金列表成功'
+        )
+        
+    except Exception as e:
+        current_app.logger.error(f"获取持仓基金列表失败: {str(e)}")
+        current_app.logger.error(traceback.format_exc())
+        return utils.error(message=f'获取基金列表失败: {str(e)}', code=500, status=500)
+
+
+@fund_controller.route('/portfolio/<int:portfolio_id>/funds', methods=['POST'])
+@jwt_required()
+def add_portfolio_fund(portfolio_id):
+    """
+    添加基金到持仓组合
+    """
+    try:
+        user_id = get_jwt_identity()
+        data = request.get_json()
+        
+        # 检查持仓是否属于该用户
+        portfolio = UserPortfolio.query.filter_by(id=portfolio_id, user_id=user_id).first()
+        if not portfolio:
+            return utils.error(message='持仓组合不存在或无权访问', code=404, status=404)
+        
+        # 验证必需字段
+        required_fields = ['fund_code', 'fund_name', 'fund_type', 'total_shares', 'avg_cost_nav']
+        for field in required_fields:
+            if field not in data or not data[field]:
+                return utils.error(message=f'缺少必需字段: {field}', code=400, status=400)
+        
+        # 检查基金是否已存在
+        existing_fund = PortfolioFund.query.filter_by(
+            portfolio_id=portfolio_id,
+            fund_code=data['fund_code']
+        ).first()
+        
+        if existing_fund:
+            return utils.error(message='该基金已存在于持仓组合中', code=400, status=400)
+        
+        # 创建新的基金持仓记录
+        new_fund = PortfolioFund(
+            portfolio_id=portfolio_id,
+            fund_code=data['fund_code'],
+            fund_name=data['fund_name'],
+            fund_type=data['fund_type'],
+            total_shares=Decimal(str(data['total_shares'])),
+            avg_cost_nav=Decimal(str(data['avg_cost_nav'])),
+            current_nav=Decimal(str(data.get('current_nav', 0)))
+        )
+        
+        # 如果提供了当前净值，计算盈亏
+        if data.get('current_nav') and float(data['current_nav']) > 0:
+            new_fund = FundService.calculate_fund_profit_loss(new_fund)
+        else:
+            # 尝试获取最新净值
+            latest_nav = FundService.get_latest_fund_nav(data['fund_code'])
+            if latest_nav:
+                new_fund.current_nav = Decimal(str(latest_nav['unit_nav']))
+                new_fund = FundService.calculate_fund_profit_loss(new_fund)
+        
+        db.session.add(new_fund)
+        
+        # 创建交易记录
+        trade_record = FundTradeRecord(
+            portfolio_id=portfolio_id,
+            fund_code=data['fund_code'],
+            fund_name=data['fund_name'],
+            trade_type='buy',
+            trade_nav=new_fund.avg_cost_nav,
+            trade_shares=new_fund.total_shares,
+            trade_amount=new_fund.total_shares * new_fund.avg_cost_nav,
+            trade_fee=Decimal(str(data.get('trade_fee', 0))),
+            trade_note=f"初始添加基金: {data['fund_name']}",
+            trade_date=datetime.now().date()
+        )
+        
+        db.session.add(trade_record)
+        db.session.commit()
+        
+        current_app.logger.info(f"用户 {user_id} 成功添加基金 {data['fund_code']} 到持仓组合 {portfolio_id}")
+        
+        return utils.success(
+            data=new_fund.to_dict(),
+            message='添加基金成功'
+        )
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"添加基金失败: {str(e)}")
+        current_app.logger.error(traceback.format_exc())
+        return utils.error(message=f'添加基金失败: {str(e)}', code=500, status=500)
+
+
+@fund_controller.route('/portfolio/<int:portfolio_id>/funds/<fund_code>', methods=['PUT'])
+@jwt_required()
+def update_portfolio_fund(portfolio_id, fund_code):
+    """
+    更新持仓基金信息
+    """
+    try:
+        user_id = get_jwt_identity()
+        data = request.get_json()
+        
+        # 检查持仓是否属于该用户
+        portfolio = UserPortfolio.query.filter_by(id=portfolio_id, user_id=user_id).first()
+        if not portfolio:
+            return utils.error(message='持仓组合不存在或无权访问', code=404, status=404)
+        
+        # 查找基金记录
+        fund = PortfolioFund.query.filter_by(
+            portfolio_id=portfolio_id,
+            fund_code=fund_code
+        ).first()
+        
+        if not fund:
+            return utils.error(message='基金不存在', code=404, status=404)
+        
+        # 更新基金信息
+        if 'total_shares' in data:
+            fund.total_shares = Decimal(str(data['total_shares']))
+        
+        if 'avg_cost_nav' in data:
+            fund.avg_cost_nav = Decimal(str(data['avg_cost_nav']))
+        
+        if 'current_nav' in data:
+            fund.current_nav = Decimal(str(data['current_nav']))
+        
+        # 重新计算盈亏
+        fund = FundService.calculate_fund_profit_loss(fund)
+        
+        db.session.commit()
+        
+        current_app.logger.info(f"用户 {user_id} 成功更新基金 {fund_code}")
+        
+        return utils.success(
+            data=fund.to_dict(),
+            message='更新基金成功'
+        )
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"更新基金失败: {str(e)}")
+        current_app.logger.error(traceback.format_exc())
+        return utils.error(message=f'更新基金失败: {str(e)}', code=500, status=500)
+
+
+@fund_controller.route('/portfolio/<int:portfolio_id>/funds/<fund_code>', methods=['DELETE'])
+@jwt_required()
+def delete_portfolio_fund(portfolio_id, fund_code):
+    """
+    删除持仓基金
+    """
+    try:
+        user_id = get_jwt_identity()
+        
+        # 检查持仓是否属于该用户
+        portfolio = UserPortfolio.query.filter_by(id=portfolio_id, user_id=user_id).first()
+        if not portfolio:
+            return utils.error(message='持仓组合不存在或无权访问', code=404, status=404)
+        
+        # 查找基金记录
+        fund = PortfolioFund.query.filter_by(
+            portfolio_id=portfolio_id,
+            fund_code=fund_code
+        ).first()
+        
+        if not fund:
+            return utils.error(message='基金不存在', code=404, status=404)
+        
+        db.session.delete(fund)
+        db.session.commit()
+        
+        current_app.logger.info(f"用户 {user_id} 成功删除基金 {fund_code}")
+        
+        return utils.success(message='删除基金成功')
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"删除基金失败: {str(e)}")
+        current_app.logger.error(traceback.format_exc())
+        return utils.error(message=f'删除基金失败: {str(e)}', code=500, status=500)
+
+
+@fund_controller.route('/portfolio/<int:portfolio_id>/funds/<fund_code>/trade', methods=['POST'])
+@jwt_required()
+def create_fund_trade_record(portfolio_id, fund_code):
+    """
+    创建基金交易记录
+    """
+    try:
+        user_id = get_jwt_identity()
+        data = request.get_json()
+        
+        # 检查持仓是否属于该用户
+        portfolio = UserPortfolio.query.filter_by(id=portfolio_id, user_id=user_id).first()
+        if not portfolio:
+            return utils.error(message='持仓组合不存在或无权访问', code=404, status=404)
+        
+        # 查找基金记录
+        fund = PortfolioFund.query.filter_by(
+            portfolio_id=portfolio_id,
+            fund_code=fund_code
+        ).first()
+        
+        if not fund:
+            return utils.error(message='基金不存在', code=404, status=404)
+        
+        # 验证必需字段
+        required_fields = ['trade_type', 'trade_nav', 'trade_shares']
+        for field in required_fields:
+            if field not in data or data[field] is None:
+                return utils.error(message=f'缺少必需字段: {field}', code=400, status=400)
+        
+        trade_type = data['trade_type']
+        trade_nav = Decimal(str(data['trade_nav']))
+        trade_shares = Decimal(str(data['trade_shares']))
+        trade_fee = Decimal(str(data.get('trade_fee', 0)))
+        
+        # 计算交易金额
+        trade_amount = trade_shares * trade_nav
+        
+        # 验证交易类型和数量
+        if trade_type == 'sell' and trade_shares > fund.total_shares:
+            return utils.error(message='赎回份额不能超过持有份额', code=400, status=400)
+        
+        # 创建交易记录
+        trade_record = FundTradeRecord(
+            portfolio_id=portfolio_id,
+            fund_code=fund_code,
+            fund_name=fund.fund_name,
+            trade_type=trade_type,
+            trade_nav=trade_nav,
+            trade_shares=trade_shares,
+            trade_amount=trade_amount,
+            trade_fee=trade_fee,
+            trade_note=data.get('trade_note'),
+            trade_date=datetime.now().date()
+        )
+        
+        db.session.add(trade_record)
+        
+        # 更新基金持仓
+        if trade_type == 'buy':
+            # 申购：增加份额，重新计算平均成本
+            total_cost = fund.total_shares * fund.avg_cost_nav + trade_amount + trade_fee
+            fund.total_shares += trade_shares
+            fund.avg_cost_nav = total_cost / fund.total_shares if fund.total_shares > 0 else Decimal('0')
+        else:
+            # 赎回：减少份额
+            fund.total_shares -= trade_shares
+        
+        # 重新计算盈亏
+        fund = FundService.calculate_fund_profit_loss(fund)
+        
+        db.session.commit()
+        
+        current_app.logger.info(f"用户 {user_id} 成功创建基金 {fund_code} 交易记录: {trade_type}")
+        
+        return utils.success(
+            data={
+                'trade_record': trade_record.to_dict(),
+                'updated_fund': fund.to_dict()
+            },
+            message='创建交易记录成功'
+        )
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"创建基金交易记录失败: {str(e)}")
+        current_app.logger.error(traceback.format_exc())
+        return utils.error(message=f'创建交易记录失败: {str(e)}', code=500, status=500)
+
+
+@fund_controller.route('/nav/<fund_code>', methods=['GET'])
+@jwt_required()
+def get_fund_nav(fund_code):
+    """
+    获取基金净值信息
+    """
+    try:
+        latest_nav = FundService.get_latest_fund_nav(fund_code)
+        
+        if latest_nav:
+            return utils.success(
+                data=latest_nav,
+                message='获取基金净值成功'
+            )
+        else:
+            return utils.error(message='未找到基金净值数据', code=404, status=404)
+        
+    except Exception as e:
+        current_app.logger.error(f"获取基金净值失败: {str(e)}")
+        current_app.logger.error(traceback.format_exc())
+        return utils.error(message=f'获取基金净值失败: {str(e)}', code=500, status=500)
+
+
+@fund_controller.route('/update-prices', methods=['POST'])
+@jwt_required()
+def update_fund_prices():
+    """
+    更新所有基金净值
+    """
+    try:
+        data = request.get_json() or {}
+        portfolio_id = data.get('portfolio_id')
+        
+        updated_count = FundService.update_portfolio_fund_prices(portfolio_id)
+        
+        return utils.success(
+            data={'updated_count': updated_count},
+            message=f'成功更新 {updated_count} 只基金的净值'
+        )
+        
+    except Exception as e:
+        current_app.logger.error(f"更新基金净值失败: {str(e)}")
+        current_app.logger.error(traceback.format_exc())
+        return utils.error(message=f'更新基金净值失败: {str(e)}', code=500, status=500)
+
+
+@fund_controller.route('/portfolio/<int:portfolio_id>/trades', methods=['GET'])
+@jwt_required()
+def get_fund_trades(portfolio_id):
+    """
+    获取指定持仓组合的基金交易记录
+    """
+    try:
+        user_id = get_jwt_identity()
+        
+        # 检查持仓是否属于该用户
+        from app.models.portfolio import UserPortfolio
+        portfolio = UserPortfolio.query.filter_by(id=portfolio_id, user_id=user_id).first()
+        if not portfolio:
+            return utils.error(message='持仓组合不存在或无权访问', code=404, status=404)
+        
+        # 获取基金交易记录
+        fund_trades = FundTradeRecord.query.filter_by(portfolio_id=portfolio_id)\
+            .order_by(FundTradeRecord.create_time.desc()).all()
+        
+        trade_list = [trade.to_dict() for trade in fund_trades]
+        
+        return utils.success(
+            data=trade_list,
+            message='获取基金交易记录成功'
+        )
+        
+    except Exception as e:
+        current_app.logger.error(f"获取基金交易记录失败: {str(e)}")
+        current_app.logger.error(traceback.format_exc())
+        return utils.error(message=f'获取基金交易记录失败: {str(e)}', code=500, status=500)

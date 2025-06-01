@@ -8,6 +8,7 @@ import decimal
 
 from app.models import db
 from app.models.portfolio import UserPortfolio, PortfolioStock, TradeRecord, PortfolioStatistics, FavoritePortfolio
+from app.models.fund import PortfolioFund
 import app.utils as utils
 
 # 创建蓝图
@@ -51,7 +52,7 @@ def get_portfolios():
 @jwt_required()
 def get_portfolio(portfolio_id):
     """
-    获取指定持仓组合的详细信息，包括持仓股票列表
+    获取指定持仓组合的详细信息，包括持仓股票列表和基金列表
     """
     try:
         user_id = get_jwt_identity()
@@ -67,6 +68,15 @@ def get_portfolio(portfolio_id):
         stocks = PortfolioStock.query.filter_by(portfolio_id=portfolio_id).all()
         stock_list = [stock.to_dict() for stock in stocks]
         
+        # 获取持仓基金列表
+        funds = PortfolioFund.query.filter_by(portfolio_id=portfolio_id).all()
+        fund_list = []
+        for fund in funds:
+            fund_dict = fund.to_dict()
+            # 为了兼容前端，添加一些字段别名
+            fund_dict['avg_cost_price'] = fund_dict['avg_cost_nav']
+            fund_list.append(fund_dict)
+        
         # 获取持仓统计数据（最近30天）
         end_date = datetime.now().date()
         start_date = end_date - timedelta(days=30)
@@ -79,10 +89,11 @@ def get_portfolio(portfolio_id):
         
         statistics_list = [stat.to_dict() for stat in statistics_data]
         
-        # 返回组合详情和持仓列表
+        # 返回组合详情、持仓股票列表和基金列表
         result = {
             'portfolio': portfolio.to_dict(),
             'stocks': stock_list,
+            'funds': fund_list,
             'statistics': statistics_list
         }
         
@@ -546,7 +557,7 @@ def delete_portfolio_stock(portfolio_id, stock_code):
 @jwt_required()
 def get_trades(portfolio_id):
     """
-    获取持仓组合的交易记录
+    获取持仓组合的交易记录（包括股票和基金）
     """
     try:
         user_id = get_jwt_identity()
@@ -556,12 +567,38 @@ def get_trades(portfolio_id):
         if not portfolio:
             return utils.error(message='持仓组合不存在或无权访问', code=404, status=404)
         
-        # 获取交易记录
-        trades = TradeRecord.query.filter_by(portfolio_id=portfolio_id).order_by(TradeRecord.trade_time.desc()).all()
-        trade_list = [trade.to_dict() for trade in trades]
+        # 获取股票交易记录
+        stock_trades = TradeRecord.query.filter_by(portfolio_id=portfolio_id).order_by(TradeRecord.trade_time.desc()).all()
+        stock_trade_list = []
+        for trade in stock_trades:
+            trade_dict = trade.to_dict()
+            trade_dict['asset_type'] = 'stock'  # 标记为股票
+            trade_dict['asset_code'] = trade_dict['stock_code']  # 统一代码字段
+            trade_dict['asset_name'] = trade_dict['stock_name']  # 统一名称字段
+            trade_dict['trade_price'] = trade_dict['trade_price']  # 股票价格
+            trade_dict['trade_quantity'] = trade_dict['trade_shares']  # 统一数量字段
+            stock_trade_list.append(trade_dict)
+        
+        # 获取基金交易记录
+        from app.models.fund import FundTradeRecord
+        fund_trades = FundTradeRecord.query.filter_by(portfolio_id=portfolio_id).order_by(FundTradeRecord.create_time.desc()).all()
+        fund_trade_list = []
+        for trade in fund_trades:
+            trade_dict = trade.to_dict()
+            trade_dict['asset_type'] = 'fund'  # 标记为基金
+            trade_dict['asset_code'] = trade_dict['fund_code']  # 统一代码字段
+            trade_dict['asset_name'] = trade_dict['fund_name']  # 统一名称字段
+            trade_dict['trade_price'] = trade_dict['trade_nav']  # 基金净值
+            trade_dict['trade_quantity'] = trade_dict['trade_shares']  # 统一数量字段
+            trade_dict['trade_time'] = trade_dict['create_time']  # 统一时间字段
+            fund_trade_list.append(trade_dict)
+        
+        # 合并两种交易记录并按时间排序
+        all_trades = stock_trade_list + fund_trade_list
+        all_trades.sort(key=lambda x: x['trade_time'], reverse=True)
         
         return utils.success(
-            data=trade_list,
+            data=all_trades,
             message='获取成功'
         )
         
@@ -740,7 +777,7 @@ def create_trade(portfolio_id):
 @jwt_required()
 def update_portfolio_prices():
     """
-    更新所有持仓股票的当前价格
+    更新所有持仓股票的当前价格和基金净值
     """
     try:
         user_id = get_jwt_identity()
@@ -752,50 +789,69 @@ def update_portfolio_prices():
             return utils.success(message='没有找到持仓组合')
         
         updated_portfolios = []
+        updated_stocks_count = 0
+        updated_funds_count = 0
         
         for portfolio in portfolios:
-            # 获取该组合下的所有股票
+            portfolio_updated = False
+            
+            # 更新股票价格
             stocks = PortfolioStock.query.filter_by(portfolio_id=portfolio.id).all()
-            if not stocks:
-                continue
-            
-            # 收集所有股票代码
-            stock_codes = [stock.stock_code for stock in stocks]
-            
-            try:
-                # 获取实时行情
-                stock_data = ak.stock_zh_a_spot_em()
-                
-                # 更新每只股票的价格
-                for stock in stocks:
-                    stock_row = stock_data[stock_data['代码'] == stock.stock_code]
+            if stocks:
+                try:
+                    # 获取实时行情
+                    stock_data = ak.stock_zh_a_spot_em()
                     
-                    if not stock_row.empty:
-                        # 获取实时价格
-                        current_price = float(stock_row['最新价'].values[0])
+                    # 更新每只股票的价格
+                    for stock in stocks:
+                        stock_row = stock_data[stock_data['代码'] == stock.stock_code]
                         
-                        # 更新股票价格和盈亏
-                        stock.current_price = current_price
-                        stock.position_value = float(stock.total_shares) * current_price
-                        stock.profit_loss = stock.position_value - (float(stock.total_shares) * float(stock.avg_cost_price))
-                        if float(stock.avg_cost_price) > 0:
-                            stock.profit_loss_rate = stock.profit_loss / (float(stock.total_shares) * float(stock.avg_cost_price))
-                    
-                # 更新组合总市值和盈亏
-                update_portfolio_values(portfolio.id)
-                
-                # 添加到更新列表
-                updated_portfolios.append(portfolio.id)
-                
-            except Exception as stock_error:
-                current_app.logger.error(f"更新股票价格失败: {str(stock_error)}")
-                continue
+                        if not stock_row.empty:
+                            # 获取实时价格
+                            current_price = float(stock_row['最新价'].values[0])
+                            
+                            # 更新股票价格和盈亏
+                            stock.current_price = current_price
+                            stock.position_value = float(stock.total_shares) * current_price
+                            stock.profit_loss = stock.position_value - (float(stock.total_shares) * float(stock.avg_cost_price))
+                            if float(stock.avg_cost_price) > 0:
+                                stock.profit_loss_rate = stock.profit_loss / (float(stock.total_shares) * float(stock.avg_cost_price))
+                            
+                            updated_stocks_count += 1
+                            portfolio_updated = True
+                        
+                except Exception as stock_error:
+                    current_app.logger.error(f"更新组合 {portfolio.id} 股票价格失败: {str(stock_error)}")
+            
+            # 更新基金净值
+            try:
+                from app.services.fund_service import FundService
+                fund_updated_count = FundService.update_portfolio_fund_prices(portfolio.id)
+                if fund_updated_count > 0:
+                    updated_funds_count += fund_updated_count
+                    portfolio_updated = True
+                    current_app.logger.info(f"组合 {portfolio.id} 更新了 {fund_updated_count} 只基金净值")
+            except Exception as fund_error:
+                current_app.logger.error(f"更新组合 {portfolio.id} 基金净值失败: {str(fund_error)}")
+            
+            # 更新组合总市值和盈亏
+            if portfolio_updated:
+                try:
+                    update_portfolio_values(portfolio.id)
+                    updated_portfolios.append(portfolio.id)
+                    current_app.logger.info(f"组合 {portfolio.id} 市值更新成功")
+                except Exception as update_error:
+                    current_app.logger.error(f"更新组合 {portfolio.id} 市值失败: {str(update_error)}")
         
         db.session.commit()
         
         return utils.success(
-            data={'updated_portfolios': updated_portfolios},
-            message='价格更新成功'
+            data={
+                'updated_portfolios': updated_portfolios,
+                'updated_stocks_count': updated_stocks_count,
+                'updated_funds_count': updated_funds_count
+            },
+            message=f'价格更新成功：{updated_stocks_count} 只股票，{updated_funds_count} 只基金'
         )
         
     except Exception as e:
@@ -890,18 +946,32 @@ def create_daily_statistics():
 
 # 辅助函数：更新组合的市值和盈亏
 def update_portfolio_values(portfolio_id):
-    """更新持仓组合的总市值和盈亏"""
+    """更新持仓组合的总市值和盈亏（包括股票和基金）"""
     try:
         from decimal import Decimal
         
         # 获取该组合下的所有股票
         stocks = PortfolioStock.query.filter_by(portfolio_id=portfolio_id).all()
         
-        # 计算总市值
-        total_value = Decimal('0')
+        # 计算股票总市值
+        stock_total_value = Decimal('0')
         for stock in stocks:
             if stock.position_value:
-                total_value += Decimal(str(stock.position_value))
+                stock_total_value += Decimal(str(stock.position_value))
+        
+        # 获取该组合下的所有基金
+        fund_total_value = Decimal('0')
+        try:
+            from app.models.fund import PortfolioFund
+            funds = PortfolioFund.query.filter_by(portfolio_id=portfolio_id).all()
+            for fund in funds:
+                if fund.position_value:
+                    fund_total_value += Decimal(str(fund.position_value))
+        except Exception as fund_error:
+            current_app.logger.error(f"计算基金市值时出错: {str(fund_error)}")
+        
+        # 计算总市值
+        total_value = stock_total_value + fund_total_value
         
         # 获取组合
         portfolio = UserPortfolio.query.get(portfolio_id)

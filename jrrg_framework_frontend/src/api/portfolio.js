@@ -107,7 +107,7 @@ export function createTradeRecord(portfolioId, tradeData) {
 }
 
 /**
- * 更新所有持仓股票的当前价格
+ * 更新所有持仓股票的当前价格和基金净值
  * @returns {Promise}
  */
 export function updatePortfolioPrices() {

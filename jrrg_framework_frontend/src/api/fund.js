@@ -267,4 +267,74 @@ export function updateFavoriteFundNote(fundCode, note) {
   return http.put(`/api/fund/favorites/${fundCode}/note`, {
     note: note
   });
+}
+
+/**
+ * 获取持仓基金列表
+ * @param {number} portfolioId - 组合ID
+ * @returns {Promise}
+ */
+export function getPortfolioFunds(portfolioId) {
+  return http.get(`/api/fund/portfolio/${portfolioId}/funds`);
+}
+
+/**
+ * 添加基金到持仓组合
+ * @param {number} portfolioId - 组合ID
+ * @param {Object} fundData - 基金数据
+ * @returns {Promise}
+ */
+export function addPortfolioFund(portfolioId, fundData) {
+  return http.post(`/api/fund/portfolio/${portfolioId}/funds`, fundData);
+}
+
+/**
+ * 更新持仓基金信息
+ * @param {number} portfolioId - 组合ID
+ * @param {string} fundCode - 基金代码
+ * @param {Object} updateData - 更新数据
+ * @returns {Promise}
+ */
+export function updatePortfolioFund(portfolioId, fundCode, updateData) {
+  return http.put(`/api/fund/portfolio/${portfolioId}/funds/${fundCode}`, updateData);
+}
+
+/**
+ * 删除持仓基金
+ * @param {number} portfolioId - 组合ID
+ * @param {string} fundCode - 基金代码
+ * @returns {Promise}
+ */
+export function deletePortfolioFund(portfolioId, fundCode) {
+  return http.delete(`/api/fund/portfolio/${portfolioId}/funds/${fundCode}`);
+}
+
+/**
+ * 创建基金交易记录
+ * @param {number} portfolioId - 组合ID
+ * @param {string} fundCode - 基金代码
+ * @param {Object} tradeData - 交易数据
+ * @returns {Promise}
+ */
+export function createFundTradeRecord(portfolioId, fundCode, tradeData) {
+  return http.post(`/api/fund/portfolio/${portfolioId}/funds/${fundCode}/trade`, tradeData);
+}
+
+/**
+ * 获取基金净值信息
+ * @param {string} fundCode - 基金代码
+ * @returns {Promise}
+ */
+export function getFundNav(fundCode) {
+  return http.get(`/api/fund/nav/${fundCode}`);
+}
+
+/**
+ * 更新所有基金净值
+ * @param {number} portfolioId - 组合ID（可选）
+ * @returns {Promise}
+ */
+export function updateFundPrices(portfolioId = null) {
+  const data = portfolioId ? { portfolio_id: portfolioId } : {};
+  return http.post('/api/fund/update-prices', data);
 } 

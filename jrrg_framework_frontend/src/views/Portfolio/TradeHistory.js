@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Table, Tag, Space, Button, message, DatePicker } from 'antd';
 import { getTradeRecords } from '../../api/portfolio';
-import { RedoOutlined } from '@ant-design/icons';
+import { RedoOutlined, StockOutlined, BankOutlined } from '@ant-design/icons';
 import moment from 'moment';
 
 const { RangePicker } = DatePicker;
@@ -19,13 +19,16 @@ const TradeHistory = ({ portfolioId, refreshDetail }) => {
     try {
       const response = await getTradeRecords(portfolioId);
       if (response.code === 0) {
-        setTradeRecords(response.data);
+        // 确保响应数据是数组
+        setTradeRecords(Array.isArray(response.data) ? response.data : []);
       } else {
         message.error(response.message || '获取交易记录失败');
+        setTradeRecords([]); // 设置为空数组
       }
     } catch (error) {
       console.error('获取交易记录出错:', error);
       message.error('获取交易记录失败，请稍后重试');
+      setTradeRecords([]); // 设置为空数组
     } finally {
       setLoading(false);
     }
@@ -33,10 +36,13 @@ const TradeHistory = ({ portfolioId, refreshDetail }) => {
 
   // 过滤交易记录
   const getFilteredData = () => {
-    if (!dateRange) return tradeRecords;
+    // 确保tradeRecords是数组
+    const safeTradeRecords = Array.isArray(tradeRecords) ? tradeRecords : [];
+    
+    if (!dateRange) return safeTradeRecords;
 
     const [startDate, endDate] = dateRange;
-    return tradeRecords.filter(record => {
+    return safeTradeRecords.filter(record => {
       const recordDate = moment(record.trade_time);
       return recordDate.isSameOrAfter(startDate, 'day') && 
              recordDate.isSameOrBefore(endDate, 'day');
@@ -59,74 +65,128 @@ const TradeHistory = ({ portfolioId, refreshDetail }) => {
       defaultSortOrder: 'descend'
     },
     {
-      title: '股票代码',
-      dataIndex: 'stock_code',
-      key: 'stock_code',
+      title: '资产类型',
+      dataIndex: 'asset_type',
+      key: 'asset_type',
+      render: (type) => (
+        <Tag color={type === 'stock' ? 'blue' : 'green'} icon={type === 'stock' ? <StockOutlined /> : <BankOutlined />}>
+          {type === 'stock' ? '股票' : '基金'}
+        </Tag>
+      ),
+      filters: [
+        { text: '股票', value: 'stock' },
+        { text: '基金', value: 'fund' },
+      ],
+      onFilter: (value, record) => record.asset_type === value,
+      width: 100,
     },
     {
-      title: '股票名称',
-      dataIndex: 'stock_name',
-      key: 'stock_name',
+      title: '代码',
+      dataIndex: 'asset_code',
+      key: 'asset_code',
+      width: 100,
+    },
+    {
+      title: '名称',
+      dataIndex: 'asset_name',
+      key: 'asset_name',
+      ellipsis: true,
     },
     {
       title: '交易类型',
       dataIndex: 'trade_type',
       key: 'trade_type',
-      render: (type) => (
-        <Tag color={type === 'buy' ? 'blue' : 'red'}>
-          {type === 'buy' ? '买入' : '卖出'}
-        </Tag>
-      ),
+      render: (type, record) => {
+        let text = '';
+        let color = '';
+        
+        if (record.asset_type === 'stock') {
+          text = type === 'buy' ? '买入' : '卖出';
+          color = type === 'buy' ? 'blue' : 'red';
+        } else {
+          text = type === 'buy' ? '申购' : '赎回';
+          color = type === 'buy' ? 'green' : 'orange';
+        }
+        
+        return <Tag color={color}>{text}</Tag>;
+      },
       filters: [
-        { text: '买入', value: 'buy' },
-        { text: '卖出', value: 'sell' },
+        { text: '买入/申购', value: 'buy' },
+        { text: '卖出/赎回', value: 'sell' },
       ],
       onFilter: (value, record) => record.trade_type === value,
+      width: 100,
     },
     {
-      title: '交易价格(元)',
+      title: '价格/净值(元)',
       dataIndex: 'trade_price',
       key: 'trade_price',
-      render: (value) => Number(value).toFixed(2),
+      render: (value, record) => {
+        const precision = record.asset_type === 'fund' ? 4 : 2;
+        return Number(value).toFixed(precision);
+      },
       sorter: (a, b) => a.trade_price - b.trade_price,
+      width: 120,
     },
     {
-      title: '交易股数',
-      dataIndex: 'trade_shares',
-      key: 'trade_shares',
-      render: (value) => Number(value).toLocaleString(),
-      sorter: (a, b) => a.trade_shares - b.trade_shares,
+      title: '数量',
+      dataIndex: 'trade_quantity',
+      key: 'trade_quantity',
+      render: (value, record) => {
+        const unit = record.asset_type === 'stock' ? '股' : '份';
+        return `${Number(value).toLocaleString()} ${unit}`;
+      },
+      sorter: (a, b) => a.trade_quantity - b.trade_quantity,
+      width: 120,
     },
     {
       title: '交易金额(元)',
       dataIndex: 'trade_amount',
       key: 'trade_amount',
-      render: (value) => value.toLocaleString('zh-CN', { style: 'currency', currency: 'CNY' }),
-      sorter: (a, b) => a.trade_amount - b.trade_amount,
+      render: (value) => Number(value).toLocaleString('zh-CN', { 
+        style: 'currency', 
+        currency: 'CNY',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2 
+      }),
+      sorter: (a, b) => Number(a.trade_amount) - Number(b.trade_amount),
+      width: 140,
     },
     {
       title: '交易费用(元)',
       dataIndex: 'trade_fee',
       key: 'trade_fee',
-      render: (value) => value.toLocaleString('zh-CN', { style: 'currency', currency: 'CNY' }),
+      render: (value) => Number(value).toLocaleString('zh-CN', { 
+        style: 'currency', 
+        currency: 'CNY',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2 
+      }),
+      width: 120,
     },
     {
       title: '交易备注',
       dataIndex: 'trade_note',
       key: 'trade_note',
       ellipsis: true,
+      render: (text) => text || '-',
     },
   ];
 
   return (
     <div className="trade-history">
       <div className="filter-bar" style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
-        <RangePicker 
-          onChange={(dates) => setDateRange(dates)}
-          allowClear
-          placeholder={['开始日期', '结束日期']}
-          style={{ marginRight: 16 }}
-        />
+        <div>
+          <RangePicker 
+            onChange={(dates) => setDateRange(dates)}
+            allowClear
+            placeholder={['开始日期', '结束日期']}
+            style={{ marginRight: 16 }}
+          />
+          <span style={{ color: '#666', fontSize: '14px' }}>
+            共 {getFilteredData().length} 条记录
+          </span>
+        </div>
         <Button 
           type="primary" 
           icon={<RedoOutlined />} 
@@ -140,10 +200,11 @@ const TradeHistory = ({ portfolioId, refreshDetail }) => {
         dataSource={getFilteredData()} 
         columns={columns} 
         rowKey="id" 
-        pagination={{ pageSize: 10 }}
+        pagination={{ pageSize: 20, showSizeChanger: true, showQuickJumper: true }}
         loading={loading}
         locale={{ emptyText: '暂无交易记录' }}
         scroll={{ x: 'max-content' }}
+        size="small"
       />
     </div>
   );

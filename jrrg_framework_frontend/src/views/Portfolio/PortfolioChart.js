@@ -87,7 +87,9 @@ const PortfolioChart = ({ statistics = [] }) => {
           itemStyle: {
             color: function(params) {
               const value = params.value;
-              return value >= 0 ? '#91cc75' : '#ee6666';
+              if (value > 0) return '#ee6666'; // 红色表示盈利
+              if (value < 0) return '#91cc75'; // 绿色表示亏损
+              return '#bfbfbf'; // 灰色表示无盈亏
             }
           }
         }
@@ -145,7 +147,9 @@ const PortfolioChart = ({ statistics = [] }) => {
           itemStyle: {
             color: function(params) {
               const value = params.value;
-              return value >= 0 ? '#91cc75' : '#ee6666';
+              if (value > 0) return '#ee6666'; // 红色表示盈利
+              if (value < 0) return '#91cc75'; // 绿色表示亏损
+              return '#bfbfbf'; // 灰色表示无盈亏
             }
           }
         },
@@ -159,7 +163,9 @@ const PortfolioChart = ({ statistics = [] }) => {
           itemStyle: {
             color: function(params) {
               const value = params.value;
-              return value >= 0 ? '#91cc75' : '#ee6666';
+              if (value > 0) return '#ee6666'; // 红色表示盈利
+              if (value < 0) return '#91cc75'; // 绿色表示亏损
+              return '#bfbfbf'; // 灰色表示无盈亏
             }
           }
         }
@@ -202,7 +208,9 @@ const PortfolioChart = ({ statistics = [] }) => {
           itemStyle: {
             color: function(params) {
               const value = params.value;
-              return value >= 0 ? '#91cc75' : '#ee6666';
+              if (value > 0) return '#ee6666'; // 红色表示盈利
+              if (value < 0) return '#91cc75'; // 绿色表示亏损
+              return '#bfbfbf'; // 灰色表示无盈亏
             }
           },
           label: {
@@ -268,25 +276,53 @@ const PortfolioChart = ({ statistics = [] }) => {
               </div>
               <div>
                 <span>总盈亏：</span>
-                <span style={{ color: Number(sortedStatistics[sortedStatistics.length - 1].total_profit_loss) >= 0 ? '#52c41a' : '#f5222d' }}>
+                <span style={{ 
+                  color: (() => {
+                    const value = Number(sortedStatistics[sortedStatistics.length - 1].total_profit_loss);
+                    if (value > 0) return '#f5222d'; // 红色表示盈利
+                    if (value < 0) return '#52c41a'; // 绿色表示亏损
+                    return '#8c8c8c'; // 灰色表示无盈亏
+                  })()
+                }}>
                   {Number(sortedStatistics[sortedStatistics.length - 1].total_profit_loss).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}元
                 </span>
               </div>
               <div>
                 <span>总收益率：</span>
-                <span style={{ color: Number(sortedStatistics[sortedStatistics.length - 1].total_profit_loss_rate) >= 0 ? '#52c41a' : '#f5222d' }}>
+                <span style={{ 
+                  color: (() => {
+                    const value = Number(sortedStatistics[sortedStatistics.length - 1].total_profit_loss_rate);
+                    if (value > 0) return '#f5222d'; // 红色表示盈利
+                    if (value < 0) return '#52c41a'; // 绿色表示亏损
+                    return '#8c8c8c'; // 灰色表示无盈亏
+                  })()
+                }}>
                   {(Number(sortedStatistics[sortedStatistics.length - 1].total_profit_loss_rate) * 100).toFixed(2)}%
                 </span>
               </div>
               <div>
                 <span>日盈亏：</span>
-                <span style={{ color: Number(sortedStatistics[sortedStatistics.length - 1].daily_profit_loss) >= 0 ? '#52c41a' : '#f5222d' }}>
+                <span style={{ 
+                  color: (() => {
+                    const value = Number(sortedStatistics[sortedStatistics.length - 1].daily_profit_loss);
+                    if (value > 0) return '#f5222d'; // 红色表示盈利
+                    if (value < 0) return '#52c41a'; // 绿色表示亏损
+                    return '#8c8c8c'; // 灰色表示无盈亏
+                  })()
+                }}>
                   {Number(sortedStatistics[sortedStatistics.length - 1].daily_profit_loss).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}元
                 </span>
               </div>
               <div>
                 <span>日收益率：</span>
-                <span style={{ color: Number(sortedStatistics[sortedStatistics.length - 1].daily_profit_loss_rate) >= 0 ? '#52c41a' : '#f5222d' }}>
+                <span style={{ 
+                  color: (() => {
+                    const value = Number(sortedStatistics[sortedStatistics.length - 1].daily_profit_loss_rate);
+                    if (value > 0) return '#f5222d'; // 红色表示盈利
+                    if (value < 0) return '#52c41a'; // 绿色表示亏损
+                    return '#8c8c8c'; // 灰色表示无盈亏
+                  })()
+                }}>
                   {(Number(sortedStatistics[sortedStatistics.length - 1].daily_profit_loss_rate) * 100).toFixed(2)}%
                 </span>
               </div>

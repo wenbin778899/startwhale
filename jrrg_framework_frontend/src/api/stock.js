@@ -54,4 +54,26 @@ export function getMarketIndexes() {
  */
 export function getMarketTrend(indexCode = '000001', period = '1y') {
   return http.get(`/api/stock/market_trend?index_code=${indexCode}&period=${period}`);
+}
+
+/**
+ * 获取股票分时数据
+ * @param {string} symbol - 股票代码
+ * @returns {Promise}
+ */
+export function getStockIntraday(symbol) {
+  return http.get('/api/stock/intraday', {
+    params: { symbol }
+  });
+}
+
+/**
+ * 获取微博舆情热门股票
+ * @param {string} timePeriod - 时间周期，可选值：CNHOUR2, CNHOUR6, CNHOUR12, CNHOUR24, CNDAY7, CNDAY30
+ * @returns {Promise}
+ */
+export function getHotStocks(timePeriod = 'CNHOUR12') {
+  return http.get('/api/stock/hot_stocks', {
+    params: { time_period: timePeriod }
+  });
 } 

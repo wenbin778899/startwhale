@@ -40,7 +40,8 @@ import {
   FallOutlined,
   RollbackOutlined,
   FullscreenOutlined,
-  DownOutlined
+  DownOutlined,
+  LineChartOutlined
 } from '@ant-design/icons';
 import { 
   getFavoriteStocks, 
@@ -52,12 +53,486 @@ import {
   getAnalysisHistory,
   refreshAnalysisHistory
 } from '../../api/strategy';
-import { getStockInfo } from '../../api/stock';
+import { getStockInfo, getStockIntraday } from '../../api/stock';
 import './StrategyManage.css';
 
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
 const { Option } = Select;
+
+// 分时图表组件
+const IntradayChart = ({ data }) => {
+  const chartRef = React.useRef(null);
+  const [hoveredPoint, setHoveredPoint] = React.useState(null);
+  const [mousePosition, setMousePosition] = React.useState({ x: 0, y: 0 });
+
+  React.useEffect(() => {
+    if (!data || !data.chart_data || !chartRef.current) return;
+
+    // 准备图表数据
+    const chartData = data.chart_data;
+    const prices = chartData.map(item => item.price);
+    const basePrice = data.prev_close || data.open_price;
+    
+    // 计算价格范围
+    const minPrice = Math.min(...prices);
+    const maxPrice = Math.max(...prices);
+    const priceRange = maxPrice - minPrice;
+    const margin = Math.max(priceRange * 0.15, 0.01); // 至少15%边距
+    
+    const chartWidth = 1000;
+    const chartHeight = 400;
+    const paddingLeft = 60;
+    const paddingRight = 20;
+    const paddingTop = 20;
+    const paddingBottom = 40;
+    const plotWidth = chartWidth - paddingLeft - paddingRight;
+    const plotHeight = chartHeight - paddingTop - paddingBottom;
+
+    // 创建SVG容器
+    const createChart = () => {
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('width', '100%');
+      svg.setAttribute('height', '100%');
+      svg.setAttribute('viewBox', `0 0 ${chartWidth} ${chartHeight}`);
+      svg.style.backgroundColor = '#fafafa';
+      
+      // 创建渐变定义
+      const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+      
+      // 上涨渐变（红色）
+      const upGradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
+      upGradient.setAttribute('id', 'upGradient');
+      upGradient.setAttribute('x1', '0%');
+      upGradient.setAttribute('y1', '0%');
+      upGradient.setAttribute('x2', '0%');
+      upGradient.setAttribute('y2', '100%');
+      
+      const upStop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+      upStop1.setAttribute('offset', '0%');
+      upStop1.setAttribute('stop-color', '#ff4d4f');
+      upStop1.setAttribute('stop-opacity', '0.3');
+      
+      const upStop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+      upStop2.setAttribute('offset', '100%');
+      upStop2.setAttribute('stop-color', '#ff4d4f');
+      upStop2.setAttribute('stop-opacity', '0.05');
+      
+      upGradient.appendChild(upStop1);
+      upGradient.appendChild(upStop2);
+      
+      // 下跌渐变（绿色）
+      const downGradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
+      downGradient.setAttribute('id', 'downGradient');
+      downGradient.setAttribute('x1', '0%');
+      downGradient.setAttribute('y1', '0%');
+      downGradient.setAttribute('x2', '0%');
+      downGradient.setAttribute('y2', '100%');
+      
+      const downStop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+      downStop1.setAttribute('offset', '0%');
+      downStop1.setAttribute('stop-color', '#52c41a');
+      downStop1.setAttribute('stop-opacity', '0.3');
+      
+      const downStop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+      downStop2.setAttribute('offset', '100%');
+      downStop2.setAttribute('stop-color', '#52c41a');
+      downStop2.setAttribute('stop-opacity', '0.05');
+      
+      defs.appendChild(upGradient);
+      defs.appendChild(downGradient);
+      svg.appendChild(defs);
+      
+      // 绘制网格线
+      const gridGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      gridGroup.setAttribute('class', 'grid');
+      
+      // 水平网格线（价格）
+      for (let i = 0; i <= 5; i++) {
+        const price = minPrice - margin + (priceRange + 2 * margin) * i / 5;
+        const y = paddingTop + plotHeight - (i / 5) * plotHeight;
+        
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', paddingLeft);
+        line.setAttribute('y1', y);
+        line.setAttribute('x2', paddingLeft + plotWidth);
+        line.setAttribute('y2', y);
+        line.setAttribute('stroke', '#e8e8e8');
+        line.setAttribute('stroke-width', i === 0 || i === 5 ? '1' : '0.5');
+        gridGroup.appendChild(line);
+        
+        // 价格标签
+        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('x', paddingLeft - 5);
+        text.setAttribute('y', y + 4);
+        text.setAttribute('text-anchor', 'end');
+        text.setAttribute('font-size', '11');
+        text.setAttribute('fill', '#666');
+        text.textContent = price.toFixed(2);
+        gridGroup.appendChild(text);
+      }
+      
+      // 垂直网格线（时间）
+      const timePoints = [0, 0.25, 0.5, 0.75, 1];
+      const timeLabels = ['09:30', '10:45', '12:00', '13:45', '15:00'];
+      
+      timePoints.forEach((ratio, index) => {
+        const x = paddingLeft + ratio * plotWidth;
+        
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', x);
+        line.setAttribute('y1', paddingTop);
+        line.setAttribute('x2', x);
+        line.setAttribute('y2', paddingTop + plotHeight);
+        line.setAttribute('stroke', '#e8e8e8');
+        line.setAttribute('stroke-width', '0.5');
+        gridGroup.appendChild(line);
+        
+        // 时间标签
+        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('x', x);
+        text.setAttribute('y', paddingTop + plotHeight + 15);
+        text.setAttribute('text-anchor', 'middle');
+        text.setAttribute('font-size', '11');
+        text.setAttribute('fill', '#666');
+        text.textContent = timeLabels[index];
+        gridGroup.appendChild(text);
+      });
+      
+      svg.appendChild(gridGroup);
+      
+      // 绘制基准线
+      if (basePrice) {
+        const baseY = paddingTop + plotHeight - ((basePrice - minPrice + margin) / (priceRange + 2 * margin)) * plotHeight;
+        const baseLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        baseLine.setAttribute('x1', paddingLeft);
+        baseLine.setAttribute('y1', baseY);
+        baseLine.setAttribute('x2', paddingLeft + plotWidth);
+        baseLine.setAttribute('y2', baseY);
+        baseLine.setAttribute('stroke', '#faad14');
+        baseLine.setAttribute('stroke-width', '1.5');
+        baseLine.setAttribute('stroke-dasharray', '5,3');
+        svg.appendChild(baseLine);
+        
+        // 基准线标签
+        const baseText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        baseText.setAttribute('x', paddingLeft + plotWidth + 5);
+        baseText.setAttribute('y', baseY + 4);
+        baseText.setAttribute('font-size', '11');
+        baseText.setAttribute('fill', '#faad14');
+        baseText.textContent = `前收 ${basePrice.toFixed(2)}`;
+        svg.appendChild(baseText);
+      }
+      
+      // 创建价格线路径
+      const pathData = prices.map((price, index) => {
+        const x = paddingLeft + (index / (prices.length - 1)) * plotWidth;
+        const y = paddingTop + plotHeight - ((price - minPrice + margin) / (priceRange + 2 * margin)) * plotHeight;
+        return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
+      }).join(' ');
+      
+      // 判断整体趋势
+      const currentPrice = prices[prices.length - 1];
+      const isUp = currentPrice >= basePrice;
+      const lineColor = isUp ? '#ff4d4f' : '#52c41a';
+      const fillGradient = isUp ? 'url(#upGradient)' : 'url(#downGradient)';
+      
+      // 创建填充区域
+      const fillData = pathData + ` L ${paddingLeft + plotWidth} ${paddingTop + plotHeight} L ${paddingLeft} ${paddingTop + plotHeight} Z`;
+      const fillPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      fillPath.setAttribute('d', fillData);
+      fillPath.setAttribute('fill', fillGradient);
+      svg.appendChild(fillPath);
+      
+      // 创建价格线
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', pathData);
+      path.setAttribute('stroke', lineColor);
+      path.setAttribute('stroke-width', '2');
+      path.setAttribute('fill', 'none');
+      svg.appendChild(path);
+      
+      // 找到最高点和最低点的索引
+      const maxPriceIndex = prices.findIndex(price => price === maxPrice);
+      const minPriceIndex = prices.findIndex(price => price === minPrice);
+      
+      // 标记最高点
+      const maxX = paddingLeft + (maxPriceIndex / (prices.length - 1)) * plotWidth;
+      const maxY = paddingTop + plotHeight - ((maxPrice - minPrice + margin) / (priceRange + 2 * margin)) * plotHeight;
+      
+      // 最高点圆形标记
+      const maxCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      maxCircle.setAttribute('cx', maxX);
+      maxCircle.setAttribute('cy', maxY);
+      maxCircle.setAttribute('r', '4');
+      maxCircle.setAttribute('fill', '#ff4d4f');
+      maxCircle.setAttribute('stroke', '#fff');
+      maxCircle.setAttribute('stroke-width', '2');
+      svg.appendChild(maxCircle);
+      
+      // 最高点标签
+      const maxLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      maxLabel.setAttribute('x', maxX);
+      maxLabel.setAttribute('y', maxY - 10);
+      maxLabel.setAttribute('text-anchor', 'middle');
+      maxLabel.setAttribute('font-size', '12');
+      maxLabel.setAttribute('font-weight', 'bold');
+      maxLabel.setAttribute('fill', '#ff4d4f');
+      maxLabel.textContent = `最高 ${maxPrice.toFixed(2)}`;
+      svg.appendChild(maxLabel);
+      
+      // 标记最低点
+      const minX = paddingLeft + (minPriceIndex / (prices.length - 1)) * plotWidth;
+      const minY = paddingTop + plotHeight - ((minPrice - minPrice + margin) / (priceRange + 2 * margin)) * plotHeight;
+      
+      // 最低点圆形标记
+      const minCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      minCircle.setAttribute('cx', minX);
+      minCircle.setAttribute('cy', minY);
+      minCircle.setAttribute('r', '4');
+      minCircle.setAttribute('fill', '#52c41a');
+      minCircle.setAttribute('stroke', '#fff');
+      minCircle.setAttribute('stroke-width', '2');
+      svg.appendChild(minCircle);
+      
+      // 最低点标签
+      const minLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      minLabel.setAttribute('x', minX);
+      minLabel.setAttribute('y', minY + 20);
+      minLabel.setAttribute('text-anchor', 'middle');
+      minLabel.setAttribute('font-size', '12');
+      minLabel.setAttribute('font-weight', 'bold');
+      minLabel.setAttribute('fill', '#52c41a');
+      minLabel.textContent = `最低 ${minPrice.toFixed(2)}`;
+      svg.appendChild(minLabel);
+      
+      // 添加交互层
+      const interactiveRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      interactiveRect.setAttribute('x', paddingLeft);
+      interactiveRect.setAttribute('y', paddingTop);
+      interactiveRect.setAttribute('width', plotWidth);
+      interactiveRect.setAttribute('height', plotHeight);
+      interactiveRect.setAttribute('fill', 'transparent');
+      interactiveRect.setAttribute('cursor', 'crosshair');
+      
+      // 创建标定线组（初始隐藏）
+      const crosshairGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      crosshairGroup.setAttribute('id', 'crosshair');
+      crosshairGroup.style.display = 'none';
+      
+      // 垂直标定线
+      const verticalLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      verticalLine.setAttribute('y1', paddingTop);
+      verticalLine.setAttribute('y2', paddingTop + plotHeight);
+      verticalLine.setAttribute('stroke', '#666');
+      verticalLine.setAttribute('stroke-width', '1');
+      verticalLine.setAttribute('stroke-dasharray', '3,3');
+      verticalLine.setAttribute('opacity', '0.8');
+      
+      // 水平标定线
+      const horizontalLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      horizontalLine.setAttribute('x1', paddingLeft);
+      horizontalLine.setAttribute('x2', paddingLeft + plotWidth);
+      horizontalLine.setAttribute('stroke', '#666');
+      horizontalLine.setAttribute('stroke-width', '1');
+      horizontalLine.setAttribute('stroke-dasharray', '3,3');
+      horizontalLine.setAttribute('opacity', '0.8');
+      
+      // 标定点
+      const crosshairPoint = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      crosshairPoint.setAttribute('r', '3');
+      crosshairPoint.setAttribute('fill', '#1890ff');
+      crosshairPoint.setAttribute('stroke', '#fff');
+      crosshairPoint.setAttribute('stroke-width', '2');
+      
+      crosshairGroup.appendChild(verticalLine);
+      crosshairGroup.appendChild(horizontalLine);
+      crosshairGroup.appendChild(crosshairPoint);
+      svg.appendChild(crosshairGroup);
+      
+      // 鼠标移动事件
+      interactiveRect.addEventListener('mousemove', (e) => {
+        const rect = svg.getBoundingClientRect();
+        const scaleX = rect.width / chartWidth;
+        
+        // 计算相对于SVG的实际坐标
+        const svgX = (e.clientX - rect.left) / scaleX;
+        
+        if (svgX >= paddingLeft && svgX <= paddingLeft + plotWidth) {
+          // 计算最近的数据点索引
+          const relativeX = svgX - paddingLeft;
+          const dataRatio = relativeX / plotWidth;
+          const dataIndex = Math.round(dataRatio * (chartData.length - 1));
+          
+          if (dataIndex >= 0 && dataIndex < chartData.length) {
+            const dataPoint = chartData[dataIndex];
+            const pointX = paddingLeft + (dataIndex / (chartData.length - 1)) * plotWidth;
+            const pointY = paddingTop + plotHeight - ((dataPoint.price - minPrice + margin) / (priceRange + 2 * margin)) * plotHeight;
+            
+            // 更新标定线位置
+            // 垂直线跟随鼠标精确位置
+            verticalLine.setAttribute('x1', svgX);
+            verticalLine.setAttribute('x2', svgX);
+            // 水平线使用数据点的Y坐标
+            horizontalLine.setAttribute('y1', pointY);
+            horizontalLine.setAttribute('y2', pointY);
+            // 标定点在数据点的精确位置
+            crosshairPoint.setAttribute('cx', pointX);
+            crosshairPoint.setAttribute('cy', pointY);
+            crosshairGroup.style.display = 'block';
+            
+            setHoveredPoint({
+              index: dataIndex,
+              data: dataPoint,
+              x: pointX,
+              y: pointY
+            });
+            setMousePosition({ x: e.clientX, y: e.clientY });
+          }
+        }
+      });
+      
+      interactiveRect.addEventListener('mouseleave', () => {
+        setHoveredPoint(null);
+        crosshairGroup.style.display = 'none';
+      });
+      
+      svg.appendChild(interactiveRect);
+      
+      return svg;
+    };
+
+    // 清空并添加图表
+    chartRef.current.innerHTML = '';
+    chartRef.current.appendChild(createChart());
+  }, [data]);
+
+  if (!data || !data.chart_data || data.chart_data.length === 0) {
+    return <Empty description="暂无分时数据" />;
+  }
+
+  const currentPrice = data.current_price;
+  const basePrice = data.prev_close || data.open_price;
+  const isUp = currentPrice >= basePrice;
+
+  return (
+    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+      <div style={{ marginBottom: 16 }}>
+        <Row gutter={16}>
+          <Col span={6}>
+            <Statistic 
+              title="最新价" 
+              value={data.current_price} 
+              precision={2} 
+              prefix="¥"
+              valueStyle={{ 
+                color: isUp ? '#ff4d4f' : '#52c41a',
+                fontSize: '18px',
+                fontWeight: 'bold'
+              }}
+            />
+          </Col>
+          <Col span={6}>
+            <Statistic 
+              title="涨跌额" 
+              value={data.change} 
+              precision={2}
+              prefix={data.change > 0 ? '+' : ''}
+              valueStyle={{ 
+                color: isUp ? '#ff4d4f' : '#52c41a',
+                fontSize: '16px'
+              }}
+            />
+          </Col>
+          <Col span={6}>
+            <Statistic 
+              title="涨跌幅" 
+              value={data.change_percent} 
+              precision={2} 
+              suffix="%"
+              prefix={data.change_percent > 0 ? '+' : ''}
+              valueStyle={{ 
+                color: isUp ? '#ff4d4f' : '#52c41a',
+                fontSize: '16px'
+              }}
+            />
+          </Col>
+          <Col span={6}>
+            <Statistic 
+              title="成交量" 
+              value={data.volume} 
+              suffix="手"
+              valueStyle={{ fontSize: '16px' }}
+            />
+          </Col>
+        </Row>
+      </div>
+      
+      <div 
+        ref={chartRef} 
+        style={{ 
+          width: '100%', 
+          height: 420, 
+          border: '1px solid #e8e8e8',
+          borderRadius: '6px',
+          backgroundColor: '#fafafa',
+          position: 'relative'
+        }}
+      />
+      
+      {/* 悬停提示框 */}
+      {hoveredPoint && (() => {
+        // 计算涨跌幅
+        const currentPointPrice = hoveredPoint.data.price;
+        const prevClosePrice = data.prev_close || data.open_price;
+        let changePercent = 0;
+        let isUp = false;
+        
+        if (prevClosePrice && prevClosePrice > 0) {
+          changePercent = ((currentPointPrice - prevClosePrice) / prevClosePrice * 100);
+          isUp = currentPointPrice >= prevClosePrice;
+        }
+        
+        return (
+          <div
+            style={{
+              position: 'fixed',
+              left: mousePosition.x + 10,
+              top: mousePosition.y - 60,
+              background: 'rgba(0, 0, 0, 0.8)',
+              color: 'white',
+              padding: '8px 12px',
+              borderRadius: '4px',
+              fontSize: '12px',
+              pointerEvents: 'none',
+              zIndex: 1000,
+              whiteSpace: 'nowrap'
+            }}
+          >
+            <div>时间: {hoveredPoint.data.time}</div>
+            <div>价格: ¥{currentPointPrice.toFixed(2)}</div>
+            <div>成交量: {hoveredPoint.data.volume}手</div>
+            {prevClosePrice && prevClosePrice > 0 && (
+              <div style={{ color: isUp ? '#ff4d4f' : '#52c41a' }}>
+                {isUp ? '▲' : '▼'} 
+                {changePercent > 0 ? '+' : ''}{changePercent.toFixed(2)}%
+              </div>
+            )}
+          </div>
+        );
+      })()}
+      
+      <div style={{ textAlign: 'center', marginTop: 8 }}>
+        <Text type="secondary">
+          交易时间: 09:30 - 15:00 | 数据点: {data.chart_data.length} 个 | 
+          <span style={{ color: isUp ? '#ff4d4f' : '#52c41a', marginLeft: 8 }}>
+            {isUp ? '📈 上涨' : '📉 下跌'}
+          </span>
+        </Text>
+      </div>
+    </div>
+  );
+};
 
 const StrategyManage = () => {
   // 自选股票相关状态
@@ -89,6 +564,12 @@ const StrategyManage = () => {
 
   // 新增状态跟踪前一个对话
   const [previousContext, setPreviousContext] = useState(null);
+
+  // 分时图表相关状态
+  const [chartVisible, setChartVisible] = useState(false);
+  const [chartLoading, setChartLoading] = useState(false);
+  const [chartData, setChartData] = useState(null);
+  const [selectedStock, setSelectedStock] = useState(null);
 
   // 页面加载时获取自选股票
   useEffect(() => {
@@ -129,35 +610,31 @@ const StrategyManage = () => {
                 change: 0,
                 change_percent: 0,
                 volume: '-',
-                amount: '-'
+                amount: '-',
+                trade_date: '-'
               };
               
               // 尝试获取实时数据
-              const stockDataResponse = await getStockInfo(stock.stock_code, 1);
-              console.log(`股票 ${stock.stock_code} 数据响应:`, stockDataResponse);
+              const stockDataResponse = await getStockIntraday(stock.stock_code);
+              console.log(`股票 ${stock.stock_code} 分时数据响应:`, stockDataResponse);
               
               if (stockDataResponse.code === 0 && stockDataResponse.data) {
-                // 检查history数据
-                if (stockDataResponse.data.history && stockDataResponse.data.history.length > 0) {
-                  const latestData = stockDataResponse.data.history[0];
-                  return {
-                    ...baseStock,
-                    current_price: latestData['收盘'],
-                    open_price: latestData['开盘'],
-                    high_price: latestData['最高'],
-                    low_price: latestData['最低'],
-                    change: latestData['涨跌额'],
-                    change_percent: latestData['涨跌幅'],
-                    volume: latestData['成交量'],
-                    amount: latestData['成交额'],
-                    stock_name: stockDataResponse.data.name || stock.stock_name
-                  };
-                } else {
-                  console.warn(`股票 ${stock.stock_code} 没有历史数据`);
-                  return baseStock;
-                }
+                const data = stockDataResponse.data;
+                return {
+                  ...baseStock,
+                  current_price: data.current_price,
+                  open_price: data.open_price,
+                  high_price: data.high_price,
+                  low_price: data.low_price,
+                  change: data.change,
+                  change_percent: data.change_percent,
+                  volume: data.volume,
+                  amount: data.volume * data.current_price, // 估算成交额
+                  trade_date: data.latest_time,
+                  stock_name: data.name || stock.stock_name
+                };
               } else {
-                console.warn(`股票 ${stock.stock_code} 数据请求失败`);
+                console.warn(`股票 ${stock.stock_code} 分时数据请求失败`);
                 return baseStock;
               }
             } catch (error) {
@@ -175,7 +652,8 @@ const StrategyManage = () => {
                 change: 0,
                 change_percent: 0,
                 volume: '-',
-                amount: '-'
+                amount: '-',
+                trade_date: '-'
               };
             }
           })
@@ -275,26 +753,18 @@ const StrategyManage = () => {
         '002230': '科大讯飞'
       };
 
-      // 直接使用getStockInfo获取股票信息（这个在股票行情页面工作正常）
-      const stockInfoResponse = await getStockInfo(searchKeyword.trim(), 1);
-      console.log('股票信息响应:', stockInfoResponse);
+      // 直接使用getStockIntraday获取股票信息
+      const stockInfoResponse = await getStockIntraday(searchKeyword.trim());
+      console.log('股票分时信息响应:', stockInfoResponse);
       
       if (stockInfoResponse.code === 0 && stockInfoResponse.data) {
         // 从响应中提取股票名称和代码
         const stockCode = searchKeyword.trim();
-        let stockName = '未知股票';
+        let stockName = stockInfoResponse.data.name || '未知股票';
         
-        // 尝试从不同位置获取股票名称
-        if (stockInfoResponse.data.name && typeof stockInfoResponse.data.name === 'string' && 
-            !stockInfoResponse.data.name.includes('.') && stockInfoResponse.data.name.length > 1) {
-          // 确保name是有效的股票名称而不是价格
-          stockName = stockInfoResponse.data.name;
-        } else if (stockNameMap[stockCode]) {
-          // 使用映射表中的名称
+        // 如果分时接口没有返回名称，使用映射表
+        if (stockName === '未知' && stockNameMap[stockCode]) {
           stockName = stockNameMap[stockCode];
-        } else if (stockInfoResponse.data.history && stockInfoResponse.data.history.length > 0) {
-          // 如果都没有，使用股票代码作为临时名称
-          stockName = `股票${stockCode}`;
         }
         
         console.log(`准备添加股票: ${stockCode} - ${stockName}`);
@@ -615,6 +1085,33 @@ const StrategyManage = () => {
     setHistoryDetailVisible(true);
   };
 
+  // 处理显示分时图
+  const handleShowChart = async (stock) => {
+    setSelectedStock(stock);
+    setChartVisible(true);
+    setChartLoading(true);
+    setChartData(null);
+
+    try {
+      console.log(`获取股票 ${stock.stock_code} 的分时数据`);
+      const response = await getStockIntraday(stock.stock_code);
+      
+      if (response.code === 0 && response.data) {
+        // 准备图表数据
+        const stockData = response.data;
+        setChartData(stockData);
+        console.log('分时图表数据获取成功:', stockData);
+      } else {
+        message.error('获取分时数据失败');
+      }
+    } catch (error) {
+      console.error('获取分时数据失败:', error);
+      message.error('获取分时数据失败');
+    } finally {
+      setChartLoading(false);
+    }
+  };
+
   // 自选股票表格列定义
   const favoriteStockColumns = [
     {
@@ -679,6 +1176,27 @@ const StrategyManage = () => {
       render: (price) => price ? `¥${parseFloat(price).toFixed(2)}` : '-'
     },
     {
+      title: '交易时间',
+      dataIndex: 'trade_date',
+      key: 'trade_date',
+      width: 120,
+      render: (datetime) => {
+        if (!datetime) return '-';
+        try {
+          // 如果包含日期和时间，显示时间部分
+          if (datetime.includes(' ')) {
+            const timePart = datetime.split(' ')[1];
+            return timePart; // 显示 HH:MM:SS 格式
+          }
+          // 如果只有日期，显示日期
+          const dateObj = new Date(datetime);
+          return dateObj.toLocaleDateString('zh-CN');
+        } catch (error) {
+          return datetime;
+        }
+      }
+    },
+    {
       title: '最低价',
       dataIndex: 'low_price',
       key: 'low_price',
@@ -727,29 +1245,55 @@ const StrategyManage = () => {
     {
       title: '操作',
       key: 'action',
-      width: 200,
+      width: 120,
       fixed: 'right',
       render: (_, record) => (
-        <Space>
-          <Button 
-            size="small" 
-            type="primary"
-            icon={<RobotOutlined />}
-            onClick={() => {
-              setSelectedStockForAI(record.stock_code);
-              setAiAnalysisVisible(true);
-            }}
-          >
-            AI分析
-          </Button>
-          <Button 
-            size="small" 
-            danger 
-            icon={<DeleteOutlined />}
-            onClick={() => handleRemoveFavoriteStock(record.stock_code)}
-          >
-            删除
-          </Button>
+        <Space size="small">
+          <Tooltip title="AI分析">
+            <Button 
+              size="small" 
+              type="default"
+              //shape="circle"
+              icon={<RobotOutlined />}
+              onClick={() => {
+                setSelectedStockForAI(record.stock_code);
+                setAiAnalysisVisible(true);
+              }}
+              style={{ 
+                color: '#7b68ee',
+                borderColor: '#e6e6fa',
+                backgroundColor: '#f0f0ff'
+              }}
+            />
+          </Tooltip>
+          <Tooltip title="分时图">
+            <Button 
+              size="small" 
+              type="default"
+              icon={<LineChartOutlined />}
+              onClick={() => handleShowChart(record)}
+              style={{ 
+                color: '#20b2aa',
+                borderColor: '#e0ffff',
+                backgroundColor: '#f0ffff'
+              }}
+            />
+          </Tooltip>
+          <Tooltip title="删除">
+            <Button 
+              size="small" 
+              type="default"
+              shape=""
+              danger
+              icon={<DeleteOutlined />}
+              onClick={() => handleRemoveFavoriteStock(record.stock_code)}
+              style={{ 
+                color: '#ff6b6b',
+                borderColor: '#ffe4e4',
+                backgroundColor: '#fff5f5'
+              }}
+            />
+          </Tooltip>
         </Space>
       )
     }
@@ -795,19 +1339,16 @@ const StrategyManage = () => {
             extra={
               <Space>
                 <Button 
-                  type="primary" 
+                  type="default" 
                   icon={<PlusOutlined />}
                   onClick={() => setAddStockModalVisible(true)}
-                >
-                  添加自选
-                </Button>
+                />
                 <Button 
+                  type="default"
                   icon={<ReloadOutlined />}
                   onClick={loadFavoriteStocks}
                   loading={loading}
-                >
-                  刷新
-                </Button>
+                />
               </Space>
             }
             className="favorite-stocks-card"
@@ -1132,8 +1673,52 @@ const StrategyManage = () => {
           </Space>
         )}
       </Modal>
+
+      {/* 分时图表弹窗 */}
+      <Modal
+        title={
+          selectedStock ? 
+          `${selectedStock.stock_name}(${selectedStock.stock_code}) - 分时图` : 
+          '分时图'
+        }
+        open={chartVisible}
+        onCancel={() => {
+          setChartVisible(false);
+          setChartData(null);
+          setSelectedStock(null);
+        }}
+        footer={[
+          <Button 
+            key="refresh" 
+            icon={<ReloadOutlined />}
+            onClick={() => selectedStock && handleShowChart(selectedStock)}
+            loading={chartLoading}
+          >
+            刷新
+          </Button>,
+          <Button key="close" onClick={() => setChartVisible(false)}>
+            关闭
+          </Button>
+        ]}
+        width={1200}
+      >
+        <div style={{ height: 500 }}>
+          {chartLoading ? (
+            <div style={{ textAlign: 'center', padding: '100px 0' }}>
+              <Spin size="large" />
+              <div style={{ marginTop: 16 }}>
+                <Text>正在加载分时数据...</Text>
+              </div>
+            </div>
+          ) : chartData ? (
+            <IntradayChart data={chartData} />
+          ) : (
+            <Empty description="暂无分时数据" />
+          )}
+        </div>
+      </Modal>
     </div>
   );
 };
 
-export default StrategyManage; 
+export default StrategyManage;

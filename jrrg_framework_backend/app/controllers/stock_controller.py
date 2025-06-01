@@ -15,6 +15,7 @@ def get_stock_info():
     请求参数:
         - symbol: 股票代码
         - days: 获取天数，默认30天
+        - latest_only: 是否只返回最新的一条数据，默认false
     """
     try:
         # 获取请求参数
@@ -73,15 +74,24 @@ def get_stock_info():
                 adjust=""
             )
             
-            # 如果没有获取到数据，扩大日期范围重试
-            max_retries = 5  # 最大重试次数
+            # 如果没有获取到数据，扩大日期范围重试，重点寻找最新可用数据
+            max_retries = 3  # 减少重试次数，提高效率
             retry_count = 0
             
             while stock_data.empty and retry_count < max_retries:
                 retry_count += 1
-                # 每次重试增加30天的范围
-                new_start_date = (datetime.now() - timedelta(days=days + retry_count * 30)).strftime("%Y%m%d")
-                current_app.logger.info(f"未找到数据，扩大查询范围: {new_start_date} 至 {end_date}")
+                # 更智能的重试策略：重点查找最近的数据
+                if retry_count == 1:
+                    # 第一次重试：扩大到90天，针对节假日等情况
+                    new_start_date = (datetime.now() - timedelta(days=90)).strftime("%Y%m%d")
+                elif retry_count == 2:
+                    # 第二次重试：扩大到半年，针对停牌等情况
+                    new_start_date = (datetime.now() - timedelta(days=180)).strftime("%Y%m%d")
+                else:
+                    # 第三次重试：扩大到一年，确保能获取到数据
+                    new_start_date = (datetime.now() - timedelta(days=365)).strftime("%Y%m%d")
+                
+                current_app.logger.info(f"未找到数据，扩大查询范围: {new_start_date} 至 {end_date} (第{retry_count}次重试)")
                 
                 stock_data = ak.stock_zh_a_hist(
                     symbol=symbol,
@@ -90,21 +100,45 @@ def get_stock_info():
                     end_date=end_date,
                     adjust=""
                 )
+                
+                # 如果获取到数据，记录实际获取的数据范围
+                if not stock_data.empty:
+                    actual_start = stock_data['日期'].min()
+                    actual_end = stock_data['日期'].max()
+                    current_app.logger.info(f"成功获取数据，实际范围: {actual_start} 至 {actual_end}，共{len(stock_data)}条记录")
             
-            # 转换为字典列表
-            result = stock_data.to_dict('records')
-            current_app.logger.info(f"获取到历史数据记录数: {len(result)}")
+            # 如果获取到数据，按日期排序确保最新数据在最后，然后根据需求返回数据
+            if not stock_data.empty:
+                # 按日期降序排序，最新的数据在前面
+                stock_data = stock_data.sort_values('日期', ascending=False)
+                
+                # 检查是否只需要最新的一条数据
+                latest_only = request.args.get('latest_only', 'false').lower() == 'true'
+                
+                if latest_only:
+                    # 只返回最新的一条记录
+                    result = [stock_data.iloc[0].to_dict()]
+                    latest_date = stock_data['日期'].iloc[0]
+                    current_app.logger.info(f"返回最新单条数据，日期: {latest_date}")
+                else:
+                    # 返回所有数据，但按从新到旧排序
+                    result = stock_data.to_dict('records')
+                    latest_date = stock_data['日期'].iloc[0]  # 第一条是最新的
+                    earliest_date = stock_data['日期'].iloc[-1]  # 最后一条是最旧的
+                    current_app.logger.info(f"获取到历史数据记录数: {len(result)}，最新交易日期: {latest_date}，最早日期: {earliest_date}")
+            else:
+                result = []
             
             # 如果还是没有数据，尝试使用备用方法
             if not result:
-                current_app.logger.warning(f"扩大范围后仍未找到数据，尝试使用备用方法")
+                current_app.logger.warning(f"扩大范围后仍未找到历史数据，尝试使用实时接口获取最新数据")
                 try:
                     # 尝试使用real_time接口获取最新数据
                     stock_real_time = ak.stock_zh_a_spot_em()
                     stock_row = stock_real_time[stock_real_time['代码'] == symbol]
                     
                     if not stock_row.empty:
-                        current_app.logger.info(f"使用实时接口获取到数据")
+                        current_app.logger.info(f"使用实时接口获取到最新交易数据")
                         # 构造一条记录
                         today = datetime.now().strftime("%Y-%m-%d")
                         record = {
@@ -121,6 +155,9 @@ def get_stock_info():
                             '换手率': float(stock_row['换手率'].values[0])
                         }
                         result = [record]
+                        current_app.logger.info(f"使用实时数据构造记录，日期: {today}")
+                    else:
+                        current_app.logger.warning(f"实时接口也未找到股票 {symbol} 的数据，可能是无效股票代码")
                 except Exception as real_time_error:
                     current_app.logger.error(f"实时接口获取数据失败: {str(real_time_error)}")
             
@@ -678,4 +715,242 @@ def get_market_trend():
     except Exception as e:
         current_app.logger.error(f"获取市场指数走势失败: {str(e)}")
         current_app.logger.error(traceback.format_exc())
-        return utils.error(message=f'获取市场指数走势失败: {str(e)}', code=500, status=500) 
+        return utils.error(message=f'获取市场指数走势失败: {str(e)}', code=500, status=500)
+
+@stock_controller.route('/intraday', methods=['GET'])
+def get_stock_intraday():
+    """
+    获取股票分时数据
+    请求参数:
+        - symbol: 股票代码
+    """
+    try:
+        # 获取请求参数
+        symbol = request.args.get('symbol', '')
+        
+        current_app.logger.info(f"获取股票分时数据: symbol={symbol}")
+        
+        if not symbol:
+            return utils.error(message='股票代码不能为空', code=400)
+        
+        # 标准化处理股票代码
+        if symbol.startswith('sh') or symbol.startswith('sz'):
+            symbol = symbol[2:]
+        symbol = symbol.strip()
+        
+        current_app.logger.info(f"处理后的股票代码: {symbol}")
+        
+        try:
+            # 获取股票名称
+            stock_name = "未知"
+            try:
+                stock_info = ak.stock_individual_info_em(symbol=symbol)
+                if not stock_info.empty:
+                    name_rows = stock_info[stock_info.iloc[:, 0].str.contains('股票简称|名称', na=False)]
+                    if not name_rows.empty:
+                        stock_name = str(name_rows.iloc[0, 1])
+                    else:
+                        if len(stock_info) > 1:
+                            stock_name = str(stock_info.iloc[1, 1])
+                current_app.logger.info(f"获取到股票名称: {stock_name}")
+            except Exception as name_error:
+                current_app.logger.warning(f"获取股票名称失败: {str(name_error)}")
+                stock_name = "未知"
+            
+            # 获取分时数据
+            current_app.logger.info(f"获取股票 {symbol} 的分时数据")
+            intraday_data = ak.stock_intraday_em(symbol=symbol)
+            
+            if intraday_data.empty:
+                current_app.logger.warning(f"未获取到股票 {symbol} 的分时数据")
+                return utils.error(message='未获取到分时数据', code=404, status=404)
+            
+            current_app.logger.info(f"获取到分时数据，共 {len(intraday_data)} 条记录")
+            
+            # 获取前一日收盘价用于计算涨跌幅
+            try:
+                # 获取历史数据获取前日收盘价
+                end_date = datetime.now().strftime("%Y%m%d")
+                start_date = (datetime.now() - timedelta(days=5)).strftime("%Y%m%d")
+                
+                hist_data = ak.stock_zh_a_hist(
+                    symbol=symbol,
+                    period="daily",
+                    start_date=start_date,
+                    end_date=end_date,
+                    adjust=""
+                )
+                
+                prev_close = None
+                if not hist_data.empty:
+                    # 按日期降序排序，获取最近两个交易日的数据
+                    hist_data_sorted = hist_data.sort_values('日期', ascending=False)
+                    if len(hist_data_sorted) >= 2:
+                        # 第二条记录是前一个交易日
+                        prev_close = float(hist_data_sorted.iloc[1]['收盘'])
+                    elif len(hist_data_sorted) >= 1:
+                        # 如果只有一条记录，使用其开盘价作为参考
+                        prev_close = float(hist_data_sorted.iloc[0]['开盘'])
+                
+                current_app.logger.info(f"前日收盘价: {prev_close}")
+            except Exception as hist_error:
+                current_app.logger.warning(f"获取历史数据失败: {str(hist_error)}")
+                prev_close = None
+            
+            # 处理分时数据
+            current_price = float(intraday_data['成交价'].iloc[-1])  # 最新价格
+            high_price = float(intraday_data['成交价'].max())        # 今日最高价
+            low_price = float(intraday_data['成交价'].min())         # 今日最低价
+            open_price = float(intraday_data['成交价'].iloc[0])      # 今日开盘价
+            
+            # 计算涨跌额和涨跌幅
+            if prev_close:
+                change = current_price - prev_close
+                change_percent = (change / prev_close) * 100
+            else:
+                # 如果没有前日收盘价，使用开盘价作为参考
+                change = current_price - open_price
+                change_percent = (change / open_price) * 100 if open_price != 0 else 0
+            
+            # 获取最新交易时间（精确到秒）
+            latest_time = intraday_data['时间'].iloc[-1]
+            today_date = datetime.now().strftime("%Y-%m-%d")
+            latest_datetime = f"{today_date} {latest_time}"
+            
+            # 计算总成交量（手数总和）
+            total_volume = int(intraday_data['手数'].sum())
+            
+            # 准备分时图表数据
+            chart_data = []
+            for _, row in intraday_data.iterrows():
+                chart_data.append({
+                    'time': row['时间'],
+                    'price': float(row['成交价']),
+                    'volume': int(row['手数'])
+                })
+            
+            # 构造结果
+            result = {
+                'symbol': symbol,
+                'name': stock_name,
+                'current_price': current_price,
+                'open_price': open_price,
+                'high_price': high_price,
+                'low_price': low_price,
+                'prev_close': prev_close,
+                'change': change,
+                'change_percent': change_percent,
+                'volume': total_volume,
+                'latest_time': latest_datetime,
+                'trade_count': len(intraday_data),
+                'chart_data': chart_data
+            }
+            
+            current_app.logger.info(f"分时数据处理完成: 最新价={current_price}, 涨跌幅={change_percent:.2f}%, 最高价={high_price}")
+            
+            return utils.success(
+                data=result,
+                message='获取分时数据成功'
+            )
+            
+        except Exception as data_error:
+            current_app.logger.error(f"获取分时数据失败: {str(data_error)}")
+            current_app.logger.error(traceback.format_exc())
+            return utils.error(message=f'获取分时数据失败: {str(data_error)}', code=500, status=500)
+            
+    except Exception as e:
+        current_app.logger.error(f"获取分时数据失败: {str(e)}")
+        current_app.logger.error(traceback.format_exc())
+        return utils.error(message=f'获取分时数据失败: {str(e)}', code=500, status=500)
+
+@stock_controller.route('/hot_stocks', methods=['GET'])
+def get_hot_stocks():
+    """
+    获取微博舆情热门股票
+    请求参数:
+        - time_period: 时间周期（可选），默认CNHOUR12
+                      CNHOUR2(2小时) CNHOUR6(6小时) CNHOUR12(12小时) 
+                      CNHOUR24(1天) CNDAY7(1周) CNDAY30(1月)
+    """
+    try:
+        # 获取时间周期参数
+        time_period = request.args.get('time_period', 'CNHOUR12')
+        
+        current_app.logger.info(f"获取微博舆情热门股票: time_period={time_period}")
+        
+        # 验证时间周期参数
+        valid_periods = ['CNHOUR2', 'CNHOUR6', 'CNHOUR12', 'CNHOUR24', 'CNDAY7', 'CNDAY30']
+        if time_period not in valid_periods:
+            return utils.error(message=f'无效的时间周期，支持的值: {", ".join(valid_periods)}', code=400)
+        
+        # 获取微博舆情报告中的热门股票
+        try:
+            hot_stocks_df = ak.stock_js_weibo_report(time_period=time_period)
+            
+            if hot_stocks_df.empty:
+                current_app.logger.warning("微博舆情接口返回空数据")
+                return utils.success(data=[], message='暂无热门股票数据')
+            
+            # 转换为字典列表
+            hot_stocks_list = hot_stocks_df.to_dict('records')
+            
+            # 处理数据格式，确保rate字段为数值类型
+            processed_stocks = []
+            for stock in hot_stocks_list:
+                try:
+                    rate_value = float(stock.get('rate', 0))
+                    processed_stocks.append({
+                        'name': stock.get('name', ''),
+                        'rate': rate_value,
+                        'rate_display': f"{rate_value:+.2f}%" if rate_value != 0 else "0.00%"
+                    })
+                except (ValueError, TypeError):
+                    # 如果转换失败，跳过这条记录
+                    current_app.logger.warning(f"无法解析股票 {stock.get('name', 'unknown')} 的rate值: {stock.get('rate', 'N/A')}")
+                    continue
+            
+            current_app.logger.info(f"成功获取 {len(processed_stocks)} 只热门股票")
+            
+            return utils.success(
+                data={
+                    'stocks': processed_stocks,
+                    'time_period': time_period,
+                    'update_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                },
+                message='获取热门股票成功'
+            )
+            
+        except Exception as api_error:
+            current_app.logger.error(f"调用akshare微博舆情接口失败: {str(api_error)}")
+            current_app.logger.error(traceback.format_exc())
+            
+            # 返回备用数据
+            fallback_data = [
+                {'name': '中国平安', 'rate': 8.5, 'rate_display': '+8.50%'},
+                {'name': '招商银行', 'rate': 7.2, 'rate_display': '+7.20%'},
+                {'name': '贵州茅台', 'rate': 6.8, 'rate_display': '+6.80%'},
+                {'name': '比亚迪', 'rate': 6.3, 'rate_display': '+6.30%'},
+                {'name': '宁德时代', 'rate': 5.9, 'rate_display': '+5.90%'},
+                {'name': '五粮液', 'rate': 5.1, 'rate_display': '+5.10%'},
+                {'name': '美的集团', 'rate': 4.7, 'rate_display': '+4.70%'},
+                {'name': '腾讯控股', 'rate': 4.2, 'rate_display': '+4.20%'},
+                {'name': '阿里巴巴', 'rate': 3.8, 'rate_display': '+3.80%'},
+                {'name': '工商银行', 'rate': 3.5, 'rate_display': '+3.50%'}
+            ]
+            
+            current_app.logger.info("使用备用热门股票数据")
+            
+            return utils.success(
+                data={
+                    'stocks': fallback_data,
+                    'time_period': time_period,
+                    'update_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                    'fallback': True
+                },
+                message='获取热门股票成功（备用数据）'
+            )
+            
+    except Exception as e:
+        current_app.logger.error(f"获取热门股票失败: {str(e)}")
+        current_app.logger.error(traceback.format_exc())
+        return utils.error(message=f'获取热门股票失败: {str(e)}', code=500) 

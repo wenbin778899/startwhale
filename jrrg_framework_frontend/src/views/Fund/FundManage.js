@@ -418,27 +418,22 @@ const FundManage = () => {
             icon={<InfoCircleOutlined />}
             onClick={() => handleViewFundDetail(record)}
             className="action-btn details-btn"
-          >
-            详情
-          </Button>
+          />
           <Button 
             type="primary" 
             size="small"
             icon={<RobotOutlined />}
             onClick={() => handleOpenAIAnalysis(record)}
             className="action-btn analysis-btn"
-          >
-            AI分析
-          </Button>
+          />
           <Button 
             danger 
+            type="primary"
             size="small"
             icon={<DeleteOutlined />}
             onClick={() => handleRemoveFavoriteFund(record.fund_code)}
             className="action-btn delete-btn"
-          >
-            删除
-          </Button>
+          />
         </Space>
       ),
     }
