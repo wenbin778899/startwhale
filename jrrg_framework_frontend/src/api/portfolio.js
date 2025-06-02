@@ -120,4 +120,13 @@ export function updatePortfolioPrices() {
  */
 export function createDailyStatistics() {
   return http.post('/api/portfolio/statistics/daily');
+}
+
+/**
+ * 获取投资组合优化建议
+ * @param {number} portfolioId - 组合ID
+ * @returns {Promise}
+ */
+export function getPortfolioOptimization(portfolioId) {
+  return http.get(`/api/portfolio/${portfolioId}/optimization`);
 } 

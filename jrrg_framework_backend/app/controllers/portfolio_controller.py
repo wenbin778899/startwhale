@@ -5,6 +5,7 @@ import traceback
 import akshare as ak
 import pandas as pd
 import decimal
+import math
 
 from app.models import db
 from app.models.portfolio import UserPortfolio, PortfolioStock, TradeRecord, PortfolioStatistics, FavoritePortfolio
@@ -990,4 +991,225 @@ def update_portfolio_values(portfolio_id):
     except Exception as e:
         current_app.logger.error(f"更新组合市值失败: {str(e)}")
         current_app.logger.error(traceback.format_exc())
-        return False 
+        return False
+
+@portfolio_controller.route('/<int:portfolio_id>/optimization', methods=['GET'])
+@jwt_required()
+def get_portfolio_optimization(portfolio_id):
+    """
+    获取投资组合优化建议
+    """
+    try:
+        user_id = get_jwt_identity()
+        
+        # 检查持仓是否属于该用户
+        portfolio = UserPortfolio.query.filter_by(id=portfolio_id, user_id=user_id).first()
+        if not portfolio:
+            return utils.error(message='持仓组合不存在或无权访问', code=404, status=404)
+        
+        # 获取持仓数据
+        stocks = PortfolioStock.query.filter_by(portfolio_id=portfolio_id).all()
+        funds = PortfolioFund.query.filter_by(portfolio_id=portfolio_id).all()
+        
+        if not stocks and not funds:
+            return utils.error(message='暂无持仓数据，无法进行优化分析', code=400)
+        
+        # 计算资产统计数据
+        assets_stats = []
+        total_value = float(portfolio.current_value or 0)
+        
+        # 处理股票数据
+        for stock in stocks:
+            position_value = float(stock.position_value or 0)
+            if position_value > 0:
+                # 计算简化的历史波动率（基于收益率的绝对值）
+                return_rate = float(stock.profit_loss_rate or 0)
+                volatility = abs(return_rate) * 2  # 简化的波动率计算
+                sharpe_ratio = (return_rate - 0.03) / (volatility + 0.01) if volatility > 0 else 0
+                
+                assets_stats.append({
+                    'id': stock.stock_code,
+                    'name': stock.stock_name,
+                    'type': 'stock',
+                    'current_weight': position_value / total_value if total_value > 0 else 0,
+                    'expected_return': return_rate,
+                    'volatility': volatility,
+                    'sharpe_ratio': sharpe_ratio,
+                    'position_value': position_value
+                })
+        
+        # 处理基金数据
+        for fund in funds:
+            position_value = float(fund.position_value or 0)
+            if position_value > 0:
+                return_rate = float(fund.profit_loss_rate or 0)
+                volatility = abs(return_rate) * 1.5  # 基金波动率通常较低
+                sharpe_ratio = (return_rate - 0.03) / (volatility + 0.01) if volatility > 0 else 0
+                
+                assets_stats.append({
+                    'id': fund.fund_code,
+                    'name': fund.fund_name,
+                    'type': 'fund',
+                    'current_weight': position_value / total_value if total_value > 0 else 0,
+                    'expected_return': return_rate,
+                    'volatility': volatility,
+                    'sharpe_ratio': sharpe_ratio,
+                    'position_value': position_value
+                })
+        
+        # 计算不同优化策略的权重
+        optimization_results = {}
+        
+        # 1. 最大夏普比率优化
+        sharpe_weights = calculate_max_sharpe_weights(assets_stats)
+        sharpe_recommendations = generate_rebalance_recommendations(assets_stats, sharpe_weights, total_value, '最大夏普比率')
+        optimization_results['max_sharpe'] = {
+            'strategy': '最大夏普比率',
+            'description': '通过最大化夏普比率优化风险调整收益',
+            'weights': sharpe_weights,
+            'expected_return': sum(asset['expected_return'] * weight for asset, weight in zip(assets_stats, sharpe_weights)),
+            'expected_volatility': calculate_portfolio_volatility(assets_stats, sharpe_weights),
+            'recommendations': sharpe_recommendations
+        }
+        
+        # 2. 最小风险优化
+        min_risk_weights = calculate_min_risk_weights(assets_stats)
+        min_risk_recommendations = generate_rebalance_recommendations(assets_stats, min_risk_weights, total_value, '最小风险')
+        optimization_results['min_risk'] = {
+            'strategy': '最小风险',
+            'description': '通过最小化投资组合方差降低投资风险',
+            'weights': min_risk_weights,
+            'expected_return': sum(asset['expected_return'] * weight for asset, weight in zip(assets_stats, min_risk_weights)),
+            'expected_volatility': calculate_portfolio_volatility(assets_stats, min_risk_weights),
+            'recommendations': min_risk_recommendations
+        }
+        
+        # 3. 平衡配置
+        balanced_weights = calculate_balanced_weights(assets_stats)
+        balanced_recommendations = generate_rebalance_recommendations(assets_stats, balanced_weights, total_value, '平衡配置')
+        optimization_results['balanced'] = {
+            'strategy': '平衡配置',
+            'description': '基于资产类型平衡配置（股票60%，基金40%）',
+            'weights': balanced_weights,
+            'expected_return': sum(asset['expected_return'] * weight for asset, weight in zip(assets_stats, balanced_weights)),
+            'expected_volatility': calculate_portfolio_volatility(assets_stats, balanced_weights),
+            'recommendations': balanced_recommendations
+        }
+        
+        # 默认使用最大夏普比率的推荐（为了向后兼容）
+        recommendations = sharpe_recommendations
+        
+        result = {
+            'portfolio_info': portfolio.to_dict(),
+            'assets_stats': assets_stats,
+            'optimization_strategies': optimization_results,
+            'recommendations': recommendations,
+            'current_portfolio_metrics': {
+                'return': float(portfolio.profit_loss_rate or 0),
+                'volatility': calculate_current_portfolio_volatility(assets_stats),
+                'sharpe_ratio': calculate_current_sharpe_ratio(portfolio)
+            }
+        }
+        
+        return utils.success(data=result, message='获取优化建议成功')
+        
+    except Exception as e:
+        current_app.logger.error(f"获取投资组合优化建议失败: {str(e)}")
+        current_app.logger.error(traceback.format_exc())
+        return utils.error(message=f'获取优化建议失败: {str(e)}', code=500, status=500)
+
+
+def calculate_max_sharpe_weights(assets_stats):
+    """计算最大夏普比率权重"""
+    total_sharpe = sum(max(0, asset['sharpe_ratio']) for asset in assets_stats)
+    if total_sharpe <= 0:
+        return [1.0 / len(assets_stats) for _ in assets_stats]
+    
+    weights = [max(0, asset['sharpe_ratio']) / total_sharpe for asset in assets_stats]
+    return weights
+
+
+def calculate_min_risk_weights(assets_stats):
+    """计算最小风险权重（等权重反向波动率加权）"""
+    total_inverse_vol = sum(1 / (asset['volatility'] + 0.01) for asset in assets_stats)
+    weights = [(1 / (asset['volatility'] + 0.01)) / total_inverse_vol for asset in assets_stats]
+    return weights
+
+
+def calculate_balanced_weights(assets_stats):
+    """计算平衡配置权重"""
+    stock_assets = [asset for asset in assets_stats if asset['type'] == 'stock']
+    fund_assets = [asset for asset in assets_stats if asset['type'] == 'fund']
+    
+    weights = []
+    stock_weight = 0.6 / len(stock_assets) if stock_assets else 0
+    fund_weight = 0.4 / len(fund_assets) if fund_assets else 0
+    
+    for asset in assets_stats:
+        if asset['type'] == 'stock':
+            weights.append(stock_weight)
+        else:
+            weights.append(fund_weight)
+    
+    return weights
+
+
+def calculate_portfolio_volatility(assets_stats, weights):
+    """计算投资组合波动率（简化版）"""
+    portfolio_variance = sum((weight * asset['volatility']) ** 2 for weight, asset in zip(weights, assets_stats))
+    return math.sqrt(portfolio_variance)
+
+
+def calculate_current_portfolio_volatility(assets_stats):
+    """计算当前投资组合波动率"""
+    current_weights = [asset['current_weight'] for asset in assets_stats]
+    return calculate_portfolio_volatility(assets_stats, current_weights)
+
+
+def calculate_current_sharpe_ratio(portfolio):
+    """计算当前投资组合夏普比率"""
+    return_rate = float(portfolio.profit_loss_rate or 0)
+    # 简化的风险计算，实际应该用历史数据计算
+    risk = abs(return_rate) + 0.05  # 添加基础风险
+    return (return_rate - 0.03) / risk if risk > 0 else 0
+
+
+def generate_rebalance_recommendations(assets_stats, target_weights, total_value, strategy):
+    """生成调仓建议"""
+    recommendations = []
+    
+    for i, asset in enumerate(assets_stats):
+        current_weight = asset['current_weight']
+        target_weight = target_weights[i]
+        weight_diff = target_weight - current_weight
+        value_diff = weight_diff * total_value
+        
+        if abs(weight_diff) > 0.05:  # 权重差异超过5%才给出建议
+            action = ''
+            if weight_diff > 0.1:
+                action = '建议大幅增持'
+            elif weight_diff > 0.05:
+                action = '建议适量增持'
+            elif weight_diff < -0.1:
+                action = '建议大幅减持'
+            elif weight_diff < -0.05:
+                action = '建议适量减持'
+            
+            recommendations.append({
+                'asset_id': asset['id'],
+                'asset_name': asset['name'],
+                'asset_type': asset['type'],
+                'action': action,
+                'current_weight': round(current_weight * 100, 2),
+                'target_weight': round(target_weight * 100, 2),
+                'weight_change': round(weight_diff * 100, 2),
+                'value_change': round(value_diff, 2),
+                'expected_return': round(asset['expected_return'] * 100, 2),
+                'volatility': round(asset['volatility'] * 100, 2),
+                'sharpe_ratio': round(asset['sharpe_ratio'], 3),
+                'strategy': strategy  # 添加策略信息
+            })
+    
+    # 按权重变化绝对值排序
+    recommendations.sort(key=lambda x: abs(x['weight_change']), reverse=True)
+    return recommendations 

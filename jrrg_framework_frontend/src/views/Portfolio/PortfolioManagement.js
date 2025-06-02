@@ -8,7 +8,7 @@ import {
   PlusOutlined, DeleteOutlined, EditOutlined, 
   ReloadOutlined, LineChartOutlined, FileTextOutlined,
   StockOutlined, InfoCircleOutlined, DollarOutlined,
-  BankOutlined, BarChartOutlined, SyncOutlined
+  BankOutlined, BarChartOutlined, SyncOutlined, ThunderboltOutlined
 } from '@ant-design/icons';
 import {
   getPortfolios, createPortfolio, updatePortfolio, deletePortfolio,
@@ -18,6 +18,7 @@ import StockDetails from './StockDetails';
 import FundDetails from './FundDetails';
 import TradeHistory from './TradeHistory';
 import PortfolioAnalysis from './PortfolioAnalysis';
+import PortfolioOptimization from './PortfolioOptimization';
 import './PortfolioManagement.css';
 
 const { TabPane } = Tabs;
@@ -451,6 +452,16 @@ const PortfolioManagement = () => {
           </TabPane>
           <TabPane tab={<span><BarChartOutlined />持仓分析</span>} key="analysis">
             <PortfolioAnalysis 
+              portfolioDetail={{
+                portfolio: portfolio,
+                stocks: safeStocks,
+                funds: safeFunds,
+                statistics: Array.isArray(statistics) ? statistics : []
+              }}
+            />
+          </TabPane>
+          <TabPane tab={<span><ThunderboltOutlined />优化推荐</span>} key="optimization">
+            <PortfolioOptimization 
               portfolioDetail={{
                 portfolio: portfolio,
                 stocks: safeStocks,
