@@ -205,4 +205,57 @@ export function updateFavoriteStockNote(stockCode, note) {
   return http.put(`/api/strategy/favorites/${stockCode}/note`, {
     note: note
   });
+}
+
+/**
+ * 获取可用的回测策略列表
+ * @returns {Promise}
+ */
+export function getBacktestStrategies() {
+  return http.get('/api/strategy/backtest/strategies');
+}
+
+/**
+ * 运行回测
+ * @param {Object} params - 回测参数
+ * @param {string} params.stock_code - 股票代码
+ * @param {string} params.stock_name - 股票名称
+ * @param {string} params.strategy_name - 策略名称
+ * @param {string} params.start_date - 开始日期
+ * @param {string} params.end_date - 结束日期
+ * @param {number} params.initial_cash - 初始资金
+ * @param {number} params.commission - 手续费率
+ * @param {Object} params.strategy_params - 策略参数
+ * @returns {Promise}
+ */
+export function runBacktest(params) {
+  return http.post('/api/strategy/backtest', params);
+}
+
+/**
+ * 获取回测历史记录
+ * @param {number} limit - 获取数量限制
+ * @param {number} offset - 偏移量，用于分页
+ * @returns {Promise}
+ */
+export function getBacktestHistory(limit = 10, offset = 0) {
+  return http.get(`/api/strategy/backtest/history?limit=${limit}&offset=${offset}`);
+}
+
+/**
+ * 获取回测详情
+ * @param {number} backtestId - 回测记录ID
+ * @returns {Promise}
+ */
+export function getBacktestDetail(backtestId) {
+  return http.get(`/api/strategy/backtest/${backtestId}`);
+}
+
+/**
+ * 删除回测记录
+ * @param {number} backtestId - 回测记录ID
+ * @returns {Promise}
+ */
+export function deleteBacktest(backtestId) {
+  return http.delete(`/api/strategy/backtest/${backtestId}`);
 } 

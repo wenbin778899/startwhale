@@ -48,20 +48,6 @@ const PortfolioOptimization = ({ portfolioDetail = {} }) => {
 
   const { portfolio = {}, stocks = [], funds = [] } = portfolioDetail;
 
-  // 如果没有持仓数据，显示提示
-  if ((!stocks || stocks.length === 0) && (!funds || funds.length === 0)) {
-    return (
-      <Card>
-        <Alert
-          message="暂无持仓数据"
-          description="请先添加股票或基金持仓，然后再进行优化分析"
-          type="info"
-          showIcon
-        />
-      </Card>
-    );
-  }
-
   // 获取优化数据
   const fetchOptimizationData = async () => {
     if (!portfolio.id) return;
@@ -87,17 +73,17 @@ const PortfolioOptimization = ({ portfolioDetail = {} }) => {
     }
   };
 
-  // 初始化加载数据
+  // 初始化加载数据 - 移到顶层
   useEffect(() => {
-    if (portfolio.id) {
+    if (portfolio.id && (stocks.length > 0 || funds.length > 0)) {
       fetchOptimizationData();
     }
-  }, [portfolio.id]);
+  }, [portfolio.id, stocks.length, funds.length]);
 
-  // 当优化策略类型改变时，触发重新渲染
+  // 当优化策略类型改变时的处理 - 移到顶层
   useEffect(() => {
-    // 这里不需要重新获取数据，只需要触发组件重新渲染
-    // 因为所有策略的数据已经在初始加载时获取了
+    // 如果你需要在优化类型改变时执行特定操作，可以在这里添加逻辑
+    // 例如，可以在这里重新计算某些值或更新UI状态
   }, [optimizationType]);
 
   // 获取当前选择的优化策略数据
@@ -202,26 +188,42 @@ const PortfolioOptimization = ({ portfolioDetail = {} }) => {
       },
       yAxis: {
         type: 'value',
-        name: '收益 (%)',
+        name: '预期收益 (%)',
         nameLocation: 'middle',
-        nameGap: 40
+        nameGap: 30
       },
-      series: [{
-        type: 'scatter',
-        data: currentData,
-        symbolSize: function(data) {
-          return Math.max(10, data[3] * 2); // 根据权重调整气泡大小
-        },
-        label: {
-          show: true,
-          formatter: '{c}',
-          position: 'top'
+      series: [
+        {
+          type: 'scatter',
+          data: currentData,
+          symbolSize: function(data) {
+            return Math.max(5, data[3] * 0.5); // 基于权重调整点的大小
+          },
+          itemStyle: {
+            color: function(params) {
+              // 根据收益/风险比例设置颜色
+              const ratio = params.data[1] / params.data[0];
+              if (ratio > 1) return '#52c41a'; // 高收益/风险
+              if (ratio > 0.5) return '#faad14'; // 中等收益/风险
+              return '#f5222d'; // 低收益/风险
+            }
+          },
+          emphasis: {
+            focus: 'series'
+          },
+          label: {
+            show: true,
+            formatter: function(params) {
+              return params.data[2];
+            },
+            position: 'top'
+          }
         }
-      }]
+      ]
     };
   };
 
-  // 建议操作表格列定义
+  // 建议操作表格列定义 - 重新添加此定义
   const recommendationColumns = [
     {
       title: '资产名称',
@@ -291,6 +293,20 @@ const PortfolioOptimization = ({ portfolioDetail = {} }) => {
       )
     }
   ];
+
+  // 如果没有持仓数据，显示提示（移到渲染部分）
+  if ((!stocks || stocks.length === 0) && (!funds || funds.length === 0)) {
+    return (
+      <Card>
+        <Alert
+          message="暂无持仓数据"
+          description="请先添加股票或基金持仓，然后再进行优化分析"
+          type="info"
+          showIcon
+        />
+      </Card>
+    );
+  }
 
   if (loading) {
     return (

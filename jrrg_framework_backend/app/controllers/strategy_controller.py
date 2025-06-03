@@ -5,8 +5,10 @@ from flask import Blueprint, request, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from sqlalchemy.exc import IntegrityError
 import traceback
+from datetime import datetime, timedelta
 
-from app.models import db, FavoriteStock, AnalysisHistory
+from app.models import db, FavoriteStock, AnalysisHistory, BacktestRecord, BacktestTrade
+from app.services.backtest_service import BacktestService
 import app.utils as utils
 
 # 创建AI股市蓝图
@@ -379,4 +381,448 @@ def save_analysis_history():
         db.session.rollback()
         current_app.logger.error(f"保存分析历史记录失败: {str(e)}")
         current_app.logger.error(traceback.format_exc())
-        return utils.error(message=f"保存分析历史记录失败: {str(e)}", code=500) 
+        return utils.error(message=f"保存分析历史记录失败: {str(e)}", code=500)
+
+@strategy_controller.route('/backtest', methods=['POST'])
+@jwt_required()
+def run_backtest():
+    """运行回测"""
+    try:
+        user_id = get_jwt_identity()
+        data = request.get_json()
+        
+        # 获取请求参数
+        stock_code = data.get('stock_code')
+        stock_name = data.get('stock_name')
+        strategy_name = data.get('strategy_name')
+        start_date = data.get('start_date')
+        end_date = data.get('end_date')
+        initial_cash = float(data.get('initial_cash', 100000))
+        commission = float(data.get('commission', 0.001))
+        strategy_params = data.get('strategy_params', {})
+        
+        current_app.logger.info(f"用户 {user_id} 请求回测: {stock_code} - {strategy_name}")
+        current_app.logger.info(f"回测参数: 日期范围 {start_date} 至 {end_date}, 初始资金 {initial_cash}, 手续费 {commission}")
+        current_app.logger.info(f"策略参数: {strategy_params}")
+        
+        # 参数验证
+        if not stock_code or not strategy_name or not start_date or not end_date:
+            current_app.logger.error(f"回测参数验证失败: stock_code={stock_code}, strategy_name={strategy_name}, start_date={start_date}, end_date={end_date}")
+            return utils.error(message="缺少必要参数", code=400)
+        
+        # 如果没有提供股票名称，尝试从自选股票中获取
+        if not stock_name:
+            current_app.logger.info(f"未提供股票名称，尝试从自选股票获取")
+            favorite_stock = db.session.query(FavoriteStock).filter_by(
+                user_id=user_id,
+                stock_code=stock_code
+            ).first()
+            
+            if favorite_stock:
+                stock_name = favorite_stock.stock_name
+                current_app.logger.info(f"从自选股票中获取到股票名称: {stock_name}")
+            else:
+                # 尝试从股票实时数据接口获取股票名称
+                try:
+                    # 直接使用akshare获取股票信息
+                    import akshare as ak
+                    stock_info = ak.stock_individual_info_em(symbol=stock_code)
+                    if not stock_info.empty:
+                        # 查找包含"股票简称"的行
+                        name_rows = stock_info[stock_info.iloc[:, 0].str.contains('股票简称|名称', na=False)]
+                        if not name_rows.empty:
+                            stock_name = str(name_rows.iloc[0, 1])
+                            current_app.logger.info(f"从akshare获取到股票名称: {stock_name}")
+                except Exception as name_error:
+                    current_app.logger.warning(f"从akshare获取股票名称失败: {str(name_error)}")
+                
+                # 如果仍未获取到名称，使用股票代码作为名称
+                if not stock_name:
+                    stock_name = stock_code
+                    current_app.logger.info(f"未能获取股票名称，使用股票代码作为名称: {stock_name}")
+                
+        # 运行回测前进行数据可用性检查
+        try:
+            # 转换日期为datetime对象
+            start_date_obj = datetime.strptime(start_date, '%Y-%m-%d')
+            end_date_obj = datetime.strptime(end_date, '%Y-%m-%d')
+            
+            # 检查日期范围
+            if start_date_obj >= end_date_obj:
+                current_app.logger.error(f"日期范围无效: {start_date} 至 {end_date}")
+                return utils.error(message="开始日期必须早于结束日期", code=400)
+                
+            # 检查数据可用性
+            try:
+                current_app.logger.info(f"检查股票数据可用性: {stock_code}, {start_date} 至 {end_date}")
+                test_data = BacktestService.get_stock_data(stock_code, start_date_obj, end_date_obj)
+                if test_data.empty:
+                    current_app.logger.error(f"股票 {stock_code} 在指定日期范围没有数据")
+                    return utils.error(message=f"股票 {stock_code} 在指定日期范围没有数据，请尝试其他股票或修改日期范围", code=400)
+                else:
+                    current_app.logger.info(f"股票数据检查通过，共 {len(test_data)} 条记录")
+            except Exception as data_error:
+                current_app.logger.error(f"股票数据可用性检查失败: {str(data_error)}")
+                return utils.error(message=f"获取股票数据失败: {str(data_error)}", code=400)
+                
+        except ValueError as date_error:
+            current_app.logger.error(f"日期格式无效: {start_date}, {end_date}, 错误: {str(date_error)}")
+            return utils.error(message="日期格式无效，请使用YYYY-MM-DD格式", code=400)
+                
+        # 运行回测
+        try:
+            current_app.logger.info(f"开始执行回测: {stock_code} - {strategy_name}")
+            result = BacktestService.run_backtest(
+                stock_code=stock_code,
+                stock_name=stock_name,
+                strategy_name=strategy_name,
+                params=strategy_params,
+                start_date=start_date,
+                end_date=end_date,
+                initial_cash=initial_cash,
+                commission=commission
+            )
+            current_app.logger.info(f"回测执行完成: 总收益率 {result['total_return']:.2f}%, 交易次数 {result['trade_count']}")
+        except Exception as backtest_error:
+            current_app.logger.error(f"回测执行失败: {str(backtest_error)}")
+            current_app.logger.error(traceback.format_exc())
+            return utils.error(message=f"回测执行失败: {str(backtest_error)}", code=400)
+        
+        # 保存回测记录到数据库
+        try:
+            current_app.logger.info(f"保存回测记录到数据库")
+            backtest_record = BacktestRecord(
+                user_id=user_id,
+                strategy_name=strategy_name,
+                stock_code=stock_code,
+                stock_name=stock_name,
+                start_date=datetime.strptime(start_date, '%Y-%m-%d').date(),
+                end_date=datetime.strptime(end_date, '%Y-%m-%d').date(),
+                initial_cash=initial_cash,
+                final_value=result['final_value'],
+                total_return=result['total_return'],
+                annual_return=result['annual_return'],
+                max_drawdown=result['max_drawdown'],
+                sharpe_ratio=result['sharpe_ratio'],
+                trade_count=result['trade_count'],
+                win_rate=result['win_rate'],
+                strategy_params=json.dumps(strategy_params),
+                result_data=json.dumps({
+                    'trades': result['trades'],
+                    'chart_image': result['chart_image']
+                })
+            )
+            
+            db.session.add(backtest_record)
+            db.session.commit()
+            
+            # 保存交易记录
+            for trade in result['trades']:
+                trade_record = BacktestTrade(
+                    backtest_id=backtest_record.id,
+                    trade_type=trade['entry_type'],
+                    trade_date=datetime.strptime(trade['entry_date'], '%Y-%m-%d').date(),
+                    price=trade['entry_price'],
+                    size=trade['size'],
+                    commission=trade['commission'],
+                    pnl=trade['pl']
+                )
+                db.session.add(trade_record)
+                
+            db.session.commit()
+            
+            current_app.logger.info(f"用户 {user_id} 回测完成，ID: {backtest_record.id}")
+            
+            # 移除base64图片数据，减少响应大小
+            result_copy = result.copy()
+            result_copy['id'] = backtest_record.id
+            result_copy.pop('chart_image', None)
+            
+            return utils.success(data=result_copy, message="回测完成")
+        except Exception as db_error:
+            db.session.rollback()
+            current_app.logger.error(f"保存回测记录失败: {str(db_error)}")
+            current_app.logger.error(traceback.format_exc())
+            return utils.error(message=f"回测完成但保存记录失败: {str(db_error)}", code=500)
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"回测失败: {str(e)}")
+        current_app.logger.error(traceback.format_exc())
+        return utils.error(message=f"回测失败: {str(e)}", code=500)
+
+@strategy_controller.route('/backtest/history', methods=['GET'])
+@jwt_required()
+def get_backtest_history():
+    """获取回测历史记录"""
+    try:
+        user_id = get_jwt_identity()
+        limit = request.args.get('limit', 10, type=int)
+        offset = request.args.get('offset', 0, type=int)
+        
+        current_app.logger.info(f"用户 {user_id} 获取回测历史记录")
+        
+        # 查询回测历史记录
+        backtest_records = db.session.query(BacktestRecord).filter_by(
+            user_id=user_id
+        ).order_by(BacktestRecord.created_at.desc()).limit(limit).offset(offset).all()
+        
+        # 转换为字典格式
+        records = [record.to_dict() for record in backtest_records]
+        
+        # 查询总记录数
+        total_count = db.session.query(BacktestRecord).filter_by(user_id=user_id).count()
+        
+        current_app.logger.info(f"用户 {user_id} 共有 {total_count} 条回测记录")
+        
+        return utils.success(data={
+            'records': records,
+            'total': total_count
+        }, message="获取回测历史记录成功")
+        
+    except Exception as e:
+        current_app.logger.error(f"获取回测历史记录失败: {str(e)}")
+        return utils.error(message="获取回测历史记录失败", code=500)
+
+@strategy_controller.route('/backtest/<int:backtest_id>', methods=['GET'])
+@jwt_required()
+def get_backtest_detail(backtest_id):
+    """获取回测详情"""
+    try:
+        user_id = get_jwt_identity()
+        
+        current_app.logger.info(f"用户 {user_id} 获取回测详情: {backtest_id}")
+        
+        # 查询回测记录
+        backtest_record = db.session.query(BacktestRecord).filter_by(
+            id=backtest_id,
+            user_id=user_id
+        ).first()
+        
+        if not backtest_record:
+            return utils.error(message="回测记录不存在", code=404)
+            
+        # 获取回测详情
+        backtest_detail = backtest_record.to_dict()
+        
+        # 获取图表数据
+        result_data = json.loads(backtest_record.result_data) if backtest_record.result_data else {}
+        backtest_detail['chart_image'] = result_data.get('chart_image', '')
+        backtest_detail['trades'] = result_data.get('trades', [])
+        
+        # 查询交易记录
+        trades = db.session.query(BacktestTrade).filter_by(
+            backtest_id=backtest_id
+        ).all()
+        
+        # 转换为字典格式
+        trade_records = [trade.to_dict() for trade in trades]
+        backtest_detail['trade_records'] = trade_records
+        
+        current_app.logger.info(f"获取回测详情成功: {backtest_id}")
+        
+        return utils.success(data=backtest_detail, message="获取回测详情成功")
+        
+    except Exception as e:
+        current_app.logger.error(f"获取回测详情失败: {str(e)}")
+        return utils.error(message="获取回测详情失败", code=500)
+
+@strategy_controller.route('/backtest/<int:backtest_id>', methods=['DELETE'])
+@jwt_required()
+def delete_backtest(backtest_id):
+    """删除回测记录"""
+    try:
+        user_id = get_jwt_identity()
+        
+        current_app.logger.info(f"用户 {user_id} 删除回测记录: {backtest_id}")
+        
+        # 查询回测记录
+        backtest_record = db.session.query(BacktestRecord).filter_by(
+            id=backtest_id,
+            user_id=user_id
+        ).first()
+        
+        if not backtest_record:
+            return utils.error(message="回测记录不存在", code=404)
+            
+        # 删除回测记录及关联的交易记录
+        db.session.delete(backtest_record)
+        db.session.commit()
+        
+        current_app.logger.info(f"删除回测记录成功: {backtest_id}")
+        
+        return utils.success(message="删除回测记录成功")
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"删除回测记录失败: {str(e)}")
+        return utils.error(message="删除回测记录失败", code=500)
+
+@strategy_controller.route('/backtest/strategies', methods=['GET'])
+@jwt_required()
+def get_strategies():
+    """获取可用的回测策略列表"""
+    try:
+        user_id = get_jwt_identity()
+        
+        current_app.logger.info(f"用户 {user_id} 获取可用策略列表")
+        
+        # 返回可用的策略列表
+        strategies = [
+            {
+                'id': 'MovingAverageStrategy',
+                'name': '单均线策略',
+                'description': '当收盘价上穿均线买入，下穿均线卖出',
+                'params': [
+                    {
+                        'name': 'ma_period',
+                        'label': '均线周期',
+                        'type': 'number',
+                        'default': 20,
+                        'min': 5,
+                        'max': 200
+                    },
+                    {
+                        'name': 'size',
+                        'label': '交易数量',
+                        'type': 'number',
+                        'default': 100,
+                        'min': 100,
+                        'max': 10000,
+                        'step': 100
+                    }
+                ]
+            },
+            {
+                'id': 'MACrossStrategy',
+                'name': '双均线交叉策略',
+                'description': '当快速均线上穿慢速均线买入，下穿时卖出',
+                'params': [
+                    {
+                        'name': 'fast_period',
+                        'label': '快速均线周期',
+                        'type': 'number',
+                        'default': 5,
+                        'min': 3,
+                        'max': 60
+                    },
+                    {
+                        'name': 'slow_period',
+                        'label': '慢速均线周期',
+                        'type': 'number',
+                        'default': 20,
+                        'min': 10,
+                        'max': 120
+                    },
+                    {
+                        'name': 'size',
+                        'label': '交易数量',
+                        'type': 'number',
+                        'default': 100,
+                        'min': 100,
+                        'max': 10000,
+                        'step': 100
+                    }
+                ]
+            },
+            {
+                'id': 'RSIStrategy',
+                'name': 'RSI超买超卖策略',
+                'description': '当RSI低于超卖阈值买入，高于超买阈值卖出',
+                'params': [
+                    {
+                        'name': 'rsi_period',
+                        'label': 'RSI周期',
+                        'type': 'number',
+                        'default': 14,
+                        'min': 5,
+                        'max': 30
+                    },
+                    {
+                        'name': 'rsi_overbought',
+                        'label': '超买阈值',
+                        'type': 'number',
+                        'default': 70,
+                        'min': 60,
+                        'max': 90
+                    },
+                    {
+                        'name': 'rsi_oversold',
+                        'label': '超卖阈值',
+                        'type': 'number',
+                        'default': 30,
+                        'min': 10,
+                        'max': 40
+                    },
+                    {
+                        'name': 'size',
+                        'label': '交易数量',
+                        'type': 'number',
+                        'default': 100,
+                        'min': 100,
+                        'max': 10000,
+                        'step': 100
+                    }
+                ]
+            }
+        ]
+        
+        return utils.success(data=strategies, message="获取策略列表成功")
+        
+    except Exception as e:
+        current_app.logger.error(f"获取策略列表失败: {str(e)}")
+        return utils.error(message="获取策略列表失败", code=500)
+
+@strategy_controller.route('/test_stock_data', methods=['GET'])
+def test_stock_data():
+    """测试股票数据获取，用于诊断回测问题"""
+    try:
+        # 获取请求参数
+        stock_code = request.args.get('stock_code', '')
+        start_date_str = request.args.get('start_date', '')
+        end_date_str = request.args.get('end_date', '')
+        
+        if not stock_code:
+            return utils.error(message="股票代码不能为空", code=400)
+            
+        current_app.logger.info(f"测试获取股票数据: {stock_code}, {start_date_str} - {end_date_str}")
+        
+        # 设置默认日期
+        if not start_date_str:
+            start_date = datetime.now() - timedelta(days=180)
+        else:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
+            
+        if not end_date_str:
+            end_date = datetime.now()
+        else:
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
+        
+        # 尝试获取股票数据
+        try:
+            from app.services.backtest_service import BacktestService
+            stock_data = BacktestService.get_stock_data(stock_code, start_date, end_date)
+            
+            # 转换为字典格式
+            data_dict = {
+                'success': True,
+                'stock_code': stock_code,
+                'start_date': start_date.strftime('%Y-%m-%d'),
+                'end_date': end_date.strftime('%Y-%m-%d'),
+                'data_length': len(stock_data),
+                'first_rows': stock_data.head(3).reset_index().to_dict('records') if not stock_data.empty else [],
+                'last_rows': stock_data.tail(3).reset_index().to_dict('records') if not stock_data.empty else []
+            }
+            
+            current_app.logger.info(f"成功获取股票数据，共 {len(stock_data)} 条记录")
+            
+            return utils.success(data=data_dict, message="获取股票数据成功")
+            
+        except Exception as e:
+            current_app.logger.error(f"获取股票数据失败: {str(e)}")
+            return utils.error(message=f"获取股票数据失败: {str(e)}", code=400)
+        
+    except Exception as e:
+        current_app.logger.error(f"测试股票数据获取失败: {str(e)}")
+        current_app.logger.error(traceback.format_exc())
+        return utils.error(message=f"测试股票数据获取失败: {str(e)}", code=500) 

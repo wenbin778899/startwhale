@@ -32,3 +32,11 @@ bcrypt==4.2.1
 python-dotenv==1.0.1
 # Flask提供关于jwt功能的扩展，用于生成与校验jwt
 Flask-JWT-Extended==4.7.1
+# 回测框架
+backtrader==1.9.76.123
+# 图像处理库
+Pillow==10.3.0
+# 日期时间处理库
+pytz==2024.1
+# TA-Lib技术分析库
+TA-Lib==0.4.28
