@@ -698,16 +698,25 @@ const Home = () => {
       {/* 市场概览 */}
       <Row gutter={[16, 16]}>
         <Col xs={24}>
-          <Title level={4} className="section-title">市场概览</Title>
-          <Button 
-            type="link" 
-            icon={<ReloadOutlined spin={loading} />}
-            onClick={handleRefreshIndexes}
-            style={{ marginLeft: 8 }}
-            disabled={loading}
-          >
-            刷新指数
-          </Button>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <Title level={4} className="section-title" style={{ marginBottom: 0, marginRight: 8 }}>市场概览</Title>
+              <Tooltip title="数据来源：雪球实时接口，刷新获取最新数据">
+                <Tag color="green" style={{ fontSize: '10px', padding: '0 4px' }}>
+                  <span style={{ color: '#52c41a' }}>●</span> 实时
+                </Tag>
+              </Tooltip>
+            </div>
+            <Button 
+              type="link" 
+              icon={<ReloadOutlined spin={loading} />}
+              onClick={handleRefreshIndexes}
+              disabled={loading}
+              size="small"
+            >
+              刷新指数
+            </Button>
+          </div>
         </Col>
         
         {/* 主要指数卡片 */}
