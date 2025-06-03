@@ -42,8 +42,12 @@ import {
   RollbackOutlined,
   FullscreenOutlined,
   DownOutlined,
-  ClockCircleOutlined
+  ClockCircleOutlined,
+  UserOutlined,
+  HistoryOutlined
 } from '@ant-design/icons';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { 
   getFavoriteFunds, 
   addFavoriteFund, 
@@ -328,13 +332,34 @@ const FundManage = () => {
 
   // 继续对话
   const handleContinueDialog = () => {
-    if (aiResponse) {
+    if (selectedHistory) {
+      // 获取历史分析的基金信息
+      const historyFund = selectedHistory.fund_code ? {
+        fund_code: selectedHistory.fund_code,
+        fund_name: selectedHistory.fund_name
+      } : null;
+      
+      // 设置基金和前置内容
+      if (historyFund) {
+        setSelectedFundForAI(historyFund);
+      }
+      
+      // 准备提示，告知用户这是基于上一个对话的继续
+      const continuationPrompt = `基于刚才关于"${selectedHistory.question}"的问题，我想进一步询问：`;
+      setUserMessage(continuationPrompt);
+      
+      // 设置前一个对话上下文
       setPreviousContext({
-        question: userMessage,
-        answer: aiResponse
+        question: selectedHistory.question,
+        answer: selectedHistory.answer
       });
-      setUserMessage('');
-      setAiResponse('');
+      
+      // 关闭历史详情模态框，打开AI分析模态框
+      setHistoryDetailVisible(false);
+      setAiAnalysisVisible(true);
+      
+      // 提示用户
+      message.info('您可以继续对话，修改问题后点击"发送"');
     }
   };
 
@@ -347,33 +372,37 @@ const FundManage = () => {
     
     setAiLoading(true);
     try {
-      const fundCode = selectedFundForAI?.fund_code;
+      let analysisPrompt = userMessage;
       
-      // 尝试直接调用Deepseek API
-      try {
-        const response = await getDeepseekFundAnalysis(
-          userMessage,
-          fundCode,
-          previousContext
-        );
-        
+      // 如果选择了特定基金，加入基金信息
+      if (selectedFundForAI) {
+        const fundInfo = selectedFundForAI.fund_name ? 
+          `${selectedFundForAI.fund_name}(${selectedFundForAI.fund_code})` : 
+          selectedFundForAI.fund_code;
+        analysisPrompt = `请分析基金 ${fundInfo}。用户问题：${userMessage}`;
+      }
+
+      // 直接调用Deepseek API，传入前一个对话上下文（如果有）
+      const response = await getDeepseekFundAnalysis(analysisPrompt, selectedFundForAI?.fund_code, previousContext);
+      
+      // 重置上下文状态，避免影响下一次对话
+      setPreviousContext(null);
+      
+      // 处理响应结果
+      if (response && response.analysis) {
         setAiResponse(response.analysis);
-        await handleRefreshHistory();
-      } catch (directError) {
-        console.error('直接调用Deepseek API失败，尝试后端API:', directError);
+        setAiAnalysisVisible(true);
         
-        // 回退到后端API
-        const response = await getFundAIAnalysis(userMessage, fundCode);
-        if (response && response.code === 0) {
-          setAiResponse(response.data.analysis);
-          await handleRefreshHistory();
-        } else {
-          message.error('AI分析失败');
-        }
+        // 添加一个小延迟，确保后端先保存完成，再刷新历史记录
+        setTimeout(() => {
+          handleRefreshHistory();
+        }, 500);
+      } else {
+        message.error('未获取到有效的分析结果');
       }
     } catch (error) {
-      console.error('基金AI分析失败:', error);
-      message.error('基金AI分析失败');
+      message.error('AI分析失败，请稍后重试');
+      console.error('AI分析失败:', error);
     } finally {
       setAiLoading(false);
     }
@@ -536,136 +565,143 @@ const FundManage = () => {
 
         <Col span={12}>
           <Card 
-            title={<Title level={4}><RobotOutlined /> AI基金分析</Title>}
-            extra={
-              <Button 
-                type="primary" 
-                icon={<RobotOutlined />}
-                onClick={() => handleOpenAIAnalysis()}
-                className="gradient-button"
-              >
-                新建分析
-              </Button>
+            title={
+              <Space>
+                <RobotOutlined style={{ color: '#1890ff' }} />
+                <span>AI智能分析</span>
+              </Space>
             }
-            className="ai-card"
-            bordered={false}
+            className="ai-analysis-card"
           >
-            <Row gutter={[16, 16]}>
-              <Col span={24}>
-                <div className="ai-banner">
-                  <div className="ai-banner-content">
-                    <Title level={4} className="ai-banner-title">AI基金分析助手</Title>
-                    <Paragraph className="ai-banner-desc">
-                      使用AI分析助手获取专业的基金投资建议和市场分析，助您做出更明智的投资决策。
-                    </Paragraph>
-                    <Button 
-                      type="primary" 
-                      icon={<RobotOutlined />} 
-                      size="large"
-                      onClick={() => handleOpenAIAnalysis()}
-                      className="ai-banner-button"
-                    >
-                      开始AI对话
-                    </Button>
-                  </div>
-                  <div className="ai-banner-image">
-                    <RobotOutlined className="ai-robot-icon" />
+            <Space direction="vertical" style={{ width: '100%' }} size="middle">
+              <Alert
+                message="AI基金分析助手"
+                description="基于大数据模型为您提供专业的基金分析建议"
+                type="info"
+                showIcon
+              />
+              
+              <div>
+                <Text strong>选择基金（可选）：</Text>
+                <Select
+                  style={{ width: '100%', marginTop: 8 }}
+                  placeholder="选择要分析的基金"
+                  allowClear
+                  value={selectedFundForAI?.fund_code}
+                  onChange={(value) => {
+                    if (value) {
+                      const fund = favoriteFunds.find(f => f.fund_code === value);
+                      setSelectedFundForAI(fund);
+                    } else {
+                      setSelectedFundForAI(null);
+                    }
+                  }}
+                >
+                  {favoriteFunds.map(fund => (
+                    <Option key={fund.fund_code} value={fund.fund_code}>
+                      {fund.fund_name}({fund.fund_code})
+                    </Option>
+                  ))}
+                </Select>
+              </div>
+
+              <div>
+                <Text strong>分析问题：</Text>
+                <TextArea
+                  style={{ marginTop: 8 }}
+                  rows={4}
+                  placeholder="请输入您想要分析的问题，例如：这只基金的投资价值如何？近期表现分析？投资建议？"
+                  value={userMessage}
+                  onChange={(e) => setUserMessage(e.target.value)}
+                />
+              </div>
+
+              <Button
+                type="primary"
+                icon={<SendOutlined />}
+                loading={aiLoading}
+                onClick={handleAIAnalysis}
+                style={{ width: '100%' }}
+                size="large"
+              >
+                获取AI分析
+              </Button>
+
+              {/* 分析历史 */}
+              {analysisHistory.length > 0 && (
+                <div className={historyFullscreen ? "history-fullscreen" : ""}>
+                  <Divider orientation="left">
+                    <Space>
+                      <Text strong>分析历史</Text>
+                      <Text type="secondary">({historyTotal}条)</Text>
+                      <Button 
+                        type="link" 
+                        icon={<ReloadOutlined />} 
+                        onClick={handleRefreshHistory}
+                        loading={historyLoading}
+                        size="small"
+                      >
+                        刷新
+                      </Button>
+                      <Button 
+                        type="link" 
+                        icon={historyFullscreen ? <RollbackOutlined /> : <FullscreenOutlined />} 
+                        onClick={() => setHistoryFullscreen(!historyFullscreen)}
+                        size="small"
+                      >
+                        {historyFullscreen ? '返回' : '展开'}
+                      </Button>
+                    </Space>
+                  </Divider>
+                  
+                  <div className="history-list-container">
+                    <List
+                      loading={historyLoading}
+                      className="history-list"
+                      size="small"
+                      dataSource={analysisHistory}
+                      renderItem={(item) => (
+                        <List.Item 
+                          className="history-item" 
+                          onClick={() => handleHistoryItemClick(item)}
+                          style={{ cursor: 'pointer' }}
+                          hoverable="true"
+                        >
+                          <List.Item.Meta
+                            avatar={<Avatar icon={<RobotOutlined />} />}
+                            title={
+                              <Space>
+                                <Text ellipsis style={{ maxWidth: 200 }}>{item.question}</Text>
+                                {item.fund_code && <Tag color="blue">{item.fund_name || item.fund_code}</Tag>}
+                              </Space>
+                            }
+                            description={
+                              <Text type="secondary" style={{ fontSize: 12 }}>
+                                {new Date(item.created_at).toLocaleString()} <span style={{ color: '#1890ff' }}>[点击查看]</span>
+                              </Text>
+                            }
+                          />
+                        </List.Item>
+                      )}
+                    />
+                    
+                    {historyMoreAvailable && (
+                      <div style={{ textAlign: 'center', marginTop: 12 }}>
+                        <Button 
+                          onClick={loadMoreHistory} 
+                          loading={historyLoading}
+                          type="default"
+                          size="small"
+                          icon={<DownOutlined />}
+                        >
+                          加载更多
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
-              </Col>
-              
-              <Col span={24}>
-                <Card 
-                  title={
-                    <div className="history-card-title">
-                      <span>历史分析记录</span>
-                      <Badge count={analysisHistory.length} style={{ backgroundColor: '#52c41a' }} />
-                    </div>
-                  }
-                  className="history-card"
-                  extra={
-                    <Button 
-                      type="primary"
-                      ghost
-                      icon={<ReloadOutlined />} 
-                      onClick={handleRefreshHistory}
-                      loading={historyLoading}
-                    >
-                      刷新
-                    </Button>
-                  }
-                  bordered={false}
-                >
-                  <List
-                    loading={historyLoading}
-                    itemLayout="horizontal"
-                    dataSource={Array.isArray(analysisHistory) ? analysisHistory : []}
-                    locale={{ emptyText: <Empty description="暂无分析历史" /> }}
-                    renderItem={item => (
-                      <List.Item
-                        key={item.id}
-                        className="history-item"
-                        actions={[
-                          <Button 
-                            type="primary"
-                            ghost
-                            onClick={() => handleHistoryItemClick(item)}
-                          >
-                            查看详情
-                          </Button>
-                        ]}
-                      >
-                        <List.Item.Meta
-                          avatar={
-                            <Avatar 
-                              icon={<RobotOutlined />} 
-                              className="ai-avatar"
-                              size="large"
-                            />
-                          }
-                          title={
-                            <div className="history-item-title">
-                              <Text strong>{item.question.length > 50 ? `${item.question.substring(0, 50)}...` : item.question}</Text>
-                              {item.fund_code && (
-                                <Tag color="blue" className="fund-tag">
-                                  {item.fund_name || item.fund_code}
-                                </Tag>
-                              )}
-                            </div>
-                          }
-                          description={
-                            <div className="history-item-desc">
-                              <Text type="secondary">
-                                <ClockCircleOutlined style={{ marginRight: 4 }} />
-                                {new Date(item.created_at).toLocaleString()}
-                              </Text>
-                            </div>
-                          }
-                        />
-                      </List.Item>
-                    )}
-                    footer={
-                      historyMoreAvailable ? (
-                        <div className="history-footer">
-                          <Button 
-                            type="link" 
-                            onClick={loadMoreHistory}
-                            loading={historyLoading}
-                            className="load-more-btn"
-                          >
-                            加载更多 <DownOutlined />
-                          </Button>
-                        </div>
-                      ) : (analysisHistory.length > 0 ? (
-                        <div className="history-footer">
-                          <Text type="secondary">已显示全部历史记录</Text>
-                        </div>
-                      ) : null)
-                    }
-                  />
-                </Card>
-              </Col>
-            </Row>
+              )}
+            </Space>
           </Card>
         </Col>
       </Row>
@@ -960,208 +996,175 @@ const FundManage = () => {
       <Modal
         title={
           <div className="ai-modal-title">
-            <div className="ai-modal-icon">
-              <RobotOutlined />
-            </div>
+            <RobotOutlined />
             <span>AI基金分析</span>
-            {selectedFundForAI && (
-              <Tag color="blue" className="ai-modal-tag">
-                {selectedFundForAI.fund_name} ({selectedFundForAI.fund_code})
-              </Tag>
-            )}
           </div>
         }
         open={aiAnalysisVisible}
-        onCancel={() => setAiAnalysisVisible(false)}
+        onCancel={() => {
+          setAiAnalysisVisible(false);
+          setAiResponse('');
+          setUserMessage('');
+          setSelectedFundForAI(null);
+          setPreviousContext(null);
+        }}
         footer={null}
-        width={800}
-        bodyStyle={{ maxHeight: '70vh', overflow: 'auto' }}
-        className="ai-analysis-modal"
-        destroyOnClose
+        width={900}
+        bodyStyle={{ padding: '20px', maxHeight: '70vh', overflowY: 'auto' }}
       >
-        <div className="ai-analysis-container">
-          {previousContext && (
-            <div className="previous-dialog">
-              <Alert
-                message={<span className="context-title">基于前一个对话的上下文</span>}
-                description={
-                  <div className="context-content">
-                    <div className="previous-question">
-                      <Avatar size="small" style={{ backgroundColor: '#1890ff' }}>您</Avatar>
-                      <div className="question-text">{previousContext.question}</div>
-                    </div>
-                    <div className="previous-answer">
-                      <Avatar size="small" icon={<RobotOutlined />} style={{ backgroundColor: '#52c41a' }} />
-                      <div className="answer-text">
-                        {previousContext.answer.length > 100 
-                          ? `${previousContext.answer.substring(0, 100)}...` 
-                          : previousContext.answer}
-                      </div>
-                    </div>
-                  </div>
-                }
-                type="info"
-                showIcon
-              />
-              <div className="context-actions">
-                <Button 
-                  size="small" 
-                  onClick={() => setPreviousContext(null)}
-                  className="clear-context-btn"
-                >
-                  清除上下文
-                </Button>
+        <div className="ai-chat-container">
+          {selectedFundForAI && (
+            <div className="analysis-status">
+              <div className="status-indicator"></div>
+              <span>分析基金：{selectedFundForAI.fund_name}({selectedFundForAI.fund_code})</span>
+            </div>
+          )}
+          
+          {/* 用户消息 */}
+          {userMessage && (
+            <div className="ai-message-container user-message-container">
+              <div className="ai-avatar user-avatar">
+                <UserOutlined />
+              </div>
+              <div className="user-message-bubble">
+                <div>{userMessage}</div>
+                <div className="message-timestamp">刚刚</div>
+              </div>
+            </div>
+          )}
+
+          {/* AI加载状态 */}
+          {aiLoading && (
+            <div className="ai-message-container">
+              <div className="ai-avatar">
+                <RobotOutlined />
+              </div>
+              <div className="ai-thinking">
+                <span>AI正在分析中</span>
+                <div className="thinking-dots">
+                  <div className="thinking-dot"></div>
+                  <div className="thinking-dot"></div>
+                  <div className="thinking-dot"></div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* AI回复 */}
+          {aiResponse && (
+            <div className="ai-message-container">
+              <div className="ai-avatar">
+                <RobotOutlined />
+              </div>
+              <div className="ai-message-bubble">
+                <div className="markdown-content">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{aiResponse}</ReactMarkdown>
+                </div>
+                <div className="message-timestamp">
+                  {new Date().toLocaleTimeString()}
+                </div>
               </div>
             </div>
           )}
           
-          <div className="input-container">
-            <div className="input-header">
-              <span className="input-title">您的问题</span>
-              {selectedFundForAI && (
-                <Tag color="blue" className="selected-fund-tag">
-                  分析: {selectedFundForAI.fund_name}
-                </Tag>
-              )}
-            </div>
-            <TextArea
-              placeholder={`请输入您的问题${selectedFundForAI ? '，例如：分析这只基金的投资价值' : '，例如：如何挑选合适的基金'}`}
-              value={userMessage}
-              onChange={(e) => setUserMessage(e.target.value)}
-              autoSize={{ minRows: 3, maxRows: 6 }}
-              disabled={aiLoading}
-              className="ai-input"
-            />
-            <div className="action-buttons">
-              <Button 
-                onClick={() => setAiAnalysisVisible(false)}
-                className="cancel-btn"
-                disabled={aiLoading}
-              >
-                取消
-              </Button>
-              <Button 
-                type="primary" 
+          {/* 输入区域 */}
+          <div className="ai-input-container">
+            <div className="ai-input-wrapper">
+              <div className="ai-input-field">
+                <TextArea
+                  rows={3}
+                  value={userMessage}
+                  onChange={(e) => setUserMessage(e.target.value)}
+                  placeholder="请输入您的基金分析问题，例如：这只基金的投资价值如何？"
+                  onPressEnter={(e) => {
+                    if (!e.shiftKey) {
+                      e.preventDefault();
+                      handleAIAnalysis();
+                    }
+                  }}
+                />
+              </div>
+              <Button
+                className="ai-send-button"
                 icon={<SendOutlined />}
-                onClick={handleAIAnalysis}
                 loading={aiLoading}
+                onClick={handleAIAnalysis}
                 disabled={!userMessage.trim()}
-                className="send-btn"
               >
-                获取AI分析
+                发送
               </Button>
-              {aiResponse && (
-                <Button 
-                  onClick={handleContinueDialog}
-                  icon={<RollbackOutlined />}
-                  className="continue-btn"
-                >
-                  继续对话
-                </Button>
-              )}
+            </div>
+            <div style={{ marginTop: 8, fontSize: '12px', color: '#6c757d' }}>
+              按Shift+Enter换行，Enter发送
             </div>
           </div>
-          
-          {aiLoading && (
-            <div className="loading-container">
-              <div className="loading-animation">
-                <Spin size="large" />
-              </div>
-              <div className="loading-text">
-                <p>AI正在思考中...</p>
-                <p className="loading-subtext">我们正在分析基金数据，这可能需要几秒钟时间</p>
-              </div>
-            </div>
-          )}
-          
-          {aiResponse && (
-            <div className="response-container">
-              <div className="response-header">
-                <div className="response-avatar">
-                  <Avatar icon={<RobotOutlined />} size="large" className="ai-response-avatar" />
-                </div>
-                <div className="response-title">
-                  <Title level={5}>AI分析结果</Title>
-                </div>
-              </div>
-              <Card 
-                bordered={false} 
-                className="response-card"
-              >
-                <div className="response-content">
-                  {aiResponse.split('\n').map((line, index) => (
-                    <p key={index}>{line || <br />}</p>
-                  ))}
-                </div>
-              </Card>
-            </div>
-          )}
         </div>
       </Modal>
 
-      {/* 历史详情模态框 */}
+      {/* 历史记录详情模态框 */}
       <Modal
         title={
-          <div>
-            <RobotOutlined /> 历史分析详情
-            {selectedHistory?.fund_code && (
-              <Tag color="blue" style={{ marginLeft: 8 }}>
-                {selectedHistory.fund_name || selectedHistory.fund_code}
-              </Tag>
-            )}
+          <div className="ai-modal-title">
+            <HistoryOutlined />
+            <span>历史分析详情</span>
           </div>
         }
         open={historyDetailVisible}
         onCancel={() => setHistoryDetailVisible(false)}
         footer={[
+          <Button 
+            key="continue" 
+            type="primary" 
+            icon={<SendOutlined />}
+            onClick={handleContinueDialog}
+          >
+            继续对话
+          </Button>,
           <Button key="close" onClick={() => setHistoryDetailVisible(false)}>
             关闭
-          </Button>,
-          <Button 
-            key="reuse" 
-            type="primary"
-            onClick={() => {
-              setHistoryDetailVisible(false);
-              setUserMessage(selectedHistory.question);
-              if (selectedHistory.fund_code) {
-                const relatedFund = favoriteFunds.find(f => f.fund_code === selectedHistory.fund_code);
-                setSelectedFundForAI(relatedFund || { 
-                  fund_code: selectedHistory.fund_code,
-                  fund_name: selectedHistory.fund_name || selectedHistory.fund_code
-                });
-              } else {
-                setSelectedFundForAI(null);
-              }
-              setAiResponse('');
-              setPreviousContext(null);
-              setAiAnalysisVisible(true);
-            }}
-          >
-            重新分析
           </Button>
         ]}
-        width={800}
+        width={900}
+        bodyStyle={{ padding: '20px', maxHeight: '70vh', overflowY: 'auto' }}
       >
-        <div className="history-detail">
-          <div className="history-question">
-            <Title level={5}>问题:</Title>
-            <Paragraph>{selectedHistory?.question}</Paragraph>
-          </div>
-          <Divider />
-          <div className="history-answer">
-            <Title level={5}>回答:</Title>
-            <div className="response-content">
-              {selectedHistory?.answer.split('\n').map((line, index) => (
-                <p key={index}>{line || <br />}</p>
-              ))}
+        {selectedHistory && (
+          <div className="ai-chat-container">
+            {selectedHistory.fund_code && (
+              <div className="analysis-status">
+                <div className="status-indicator"></div>
+                <span>分析基金：{selectedHistory.fund_name}({selectedHistory.fund_code})</span>
+              </div>
+            )}
+            
+            {/* 用户问题 */}
+            <div className="ai-message-container user-message-container">
+              <div className="ai-avatar user-avatar">
+                <UserOutlined />
+              </div>
+              <div className="user-message-bubble">
+                <div>{selectedHistory.question}</div>
+                <div className="message-timestamp">
+                  {new Date(selectedHistory.created_at).toLocaleString()}
+                </div>
+              </div>
+            </div>
+
+            {/* AI回复 */}
+            <div className="ai-message-container">
+              <div className="ai-avatar">
+                <RobotOutlined />
+              </div>
+              <div className="ai-message-bubble">
+                <div className="markdown-content">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedHistory.answer}</ReactMarkdown>
+                </div>
+                <div className="message-timestamp">
+                  {new Date(selectedHistory.created_at).toLocaleString()}
+                </div>
+              </div>
             </div>
           </div>
-          <div className="history-meta">
-            <Text type="secondary">
-              分析时间: {selectedHistory ? new Date(selectedHistory.created_at).toLocaleString() : ''}
-            </Text>
-          </div>
-        </div>
+        )}
       </Modal>
     </div>
   );

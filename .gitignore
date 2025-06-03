@@ -52,3 +52,4 @@ build/
 # 其他
 .DS_Store
 Thumbs.db 
+*/app.env

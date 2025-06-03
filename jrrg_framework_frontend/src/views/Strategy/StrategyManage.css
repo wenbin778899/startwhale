@@ -298,19 +298,698 @@
 
 /* 详情模态框样式 */
 .history-detail-question {
-  background-color: #f9f9f9;
-  padding: 12px 16px;
-  border-radius: 6px;
-  border-left: 4px solid #1890ff;
-  margin-bottom: 16px;
+  background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+  padding: 16px 20px;
+  border-radius: 12px;
+  border: none;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  position: relative;
+}
+
+.history-detail-question::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: linear-gradient(135deg, #1976d2 0%, #9c27b0 100%);
+  border-radius: 2px;
 }
 
 .history-detail-answer {
-  background-color: #f6f6f6;
-  padding: 16px;
-  border-radius: 6px;
-  border: 1px solid #d9d9d9;
+  background: linear-gradient(135deg, #f1f8e9 0%, #e8f5e8 100%);
+  padding: 20px;
+  border-radius: 12px;
+  border: none;
   max-height: 400px;
   overflow-y: auto;
   white-space: pre-wrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  position: relative;
+  line-height: 1.6;
+  font-size: 14px;
+  color: #2e7d32;
+}
+
+.history-detail-answer::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: linear-gradient(135deg, #4caf50 0%, #81c784 100%);
+  border-radius: 2px;
+}
+
+/* AI对话界面美化 */
+.ai-chat-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 300px;
+}
+
+.ai-message-container {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.user-message-container {
+  flex-direction: row-reverse;
+}
+
+.ai-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 18px;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+  flex-shrink: 0;
+}
+
+.user-avatar {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4);
+  border: 3px solid rgba(255, 255, 255, 0.5);
+  transition: all 0.3s ease;
+}
+
+.user-avatar:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+}
+
+.ai-message-bubble {
+  max-width: 80%;
+  padding: 16px 20px;
+  border-radius: 4px 4px 4px 0px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e9ecef;
+  position: relative;
+  line-height: 1.6;
+  font-size: 14px;
+  color: #495057;
+}
+
+.ai-message-bubble::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: -8px;
+  width: 0;
+  height: 0;
+  border: 8px solid transparent;
+  border-right-color: #ffffff;
+  border-bottom: 0;
+  border-left: 0;
+  margin-bottom: -8px;
+}
+
+.user-message-bubble {
+  border-radius: 4px 4px 0px 4px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.35);
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.user-message-bubble:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 24px rgba(102, 126, 234, 0.45);
+}
+
+/* 用户气泡尖角的颜色 */
+.user-message-bubble::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  right: -8px;
+  width: 0;
+  height: 0;
+  border: 8px solid transparent;
+  border-left-color: #764ba2;
+  border-bottom: 0;
+  border-right: 0;
+  margin-bottom: -8px;
+}
+
+/* 用户气泡内层光泽效果 */
+.user-message-bubble::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.08) 50%, transparent 100%);
+  border-radius: 4px 4px 0 0;
+  pointer-events: none;
+}
+
+/* 打字机效果 */
+.typing-effect {
+  overflow: hidden;
+  border-right: 2px solid #667eea;
+  white-space: nowrap;
+  animation: typing 3.5s steps(40, end), blink-caret 0.75s step-end infinite;
+}
+
+@keyframes typing {
+  from { width: 0 }
+  to { width: 100% }
+}
+
+@keyframes blink-caret {
+  from, to { border-color: transparent }
+  50% { border-color: #667eea }
+}
+
+/* 加载动画 */
+.ai-thinking {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  margin: 8px 0;
+}
+
+.thinking-dots {
+  display: flex;
+  gap: 4px;
+}
+
+.thinking-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #667eea;
+  animation: thinking 1.4s ease-in-out infinite both;
+}
+
+.thinking-dot:nth-child(1) { animation-delay: -0.32s; }
+.thinking-dot:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes thinking {
+  0%, 80%, 100% {
+    transform: scale(0);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* 输入区域美化 */
+.ai-input-container {
+  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid #e9ecef;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.ai-input-wrapper {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.ai-input-field {
+  flex: 1;
+}
+
+.ai-input-field .ant-input {
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+  padding: 12px 16px;
+  font-size: 14px;
+  line-height: 1.5;
+  resize: vertical;
+  min-height: 40px;
+  transition: all 0.3s ease;
+}
+
+.ai-input-field .ant-input:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.ai-send-button {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  height: auto;
+  min-height: 40px;
+  color: white;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.ai-send-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.ai-send-button:active {
+  transform: translateY(0);
+}
+
+/* 消息时间戳 */
+.message-timestamp {
+  font-size: 11px;
+  color: #6c757d;
+  margin-top: 4px;
+  text-align: right;
+}
+
+.user-message-container .message-timestamp {
+  color: rgba(255, 255, 255, 0.7);
+  text-align: left;
+}
+
+/* 分析状态指示器 */
+.analysis-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+  border-radius: 8px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  color: #1976d2;
+}
+
+.status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #4caf50;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7);
+  }
+  
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 8px rgba(76, 175, 80, 0);
+  }
+  
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(76, 175, 80, 0);
+  }
+}
+
+/* 模态框标题增强 */
+.ai-modal-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ai-modal-title .anticon {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-size: 20px;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .ai-message-bubble,
+  .user-message-bubble {
+    max-width: 90%;
+    padding: 12px 16px;
+    font-size: 13px;
+  }
+  
+  .ai-avatar,
+  .user-avatar {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+  }
+  
+  .ai-input-container {
+    padding: 12px;
+  }
+  
+  .ai-input-wrapper {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .ai-send-button {
+    width: 100%;
+  }
+}
+
+/* 用户消息文字美化 */
+.user-message-bubble div {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  font-weight: 500;
+  letter-spacing: 0.3px;
+}
+
+/* 用户消息时间戳美化 */
+.user-message-container .message-timestamp {
+  color: rgba(255, 255, 255, 0.8);
+  text-align: left;
+  font-size: 11px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* 优化用户气泡的响应式设计 */
+@media (max-width: 768px) {
+  .user-message-bubble {
+    border-radius: 4px 4px 0px 4px;
+    padding: 12px 16px;
+    font-size: 13px;
+    box-shadow: 0 3px 16px rgba(102, 126, 234, 0.4);
+  }
+  
+  .user-message-bubble:hover {
+    transform: none; /* 移动端不使用hover变换 */
+  }
+  
+  .user-avatar {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+  }
+  
+  .user-avatar:hover {
+    transform: none; /* 移动端不使用hover变换 */
+  }
+}
+
+/* 添加用户气泡动画进入效果 */
+@keyframes slideInFromRight {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.user-message-container {
+  animation: slideInFromRight 0.3s ease-out;
+}
+
+/* AI消息动画进入效果 */
+@keyframes slideInFromLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.ai-message-container:not(.user-message-container) {
+  animation: slideInFromLeft 0.3s ease-out;
+}
+
+/* Markdown内容样式 */
+.markdown-content {
+  line-height: 1.6;
+  font-size: 14px;
+}
+
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3,
+.markdown-content h4,
+.markdown-content h5,
+.markdown-content h6 {
+  margin: 16px 0 8px 0;
+  font-weight: 600;
+  color: inherit;
+}
+
+.markdown-content h1 {
+  font-size: 20px;
+  border-bottom: 2px solid #e1e4e8;
+  padding-bottom: 8px;
+}
+
+.markdown-content h2 {
+  font-size: 18px;
+  border-bottom: 1px solid #e1e4e8;
+  padding-bottom: 6px;
+}
+
+.markdown-content h3 {
+  font-size: 16px;
+}
+
+.markdown-content h4 {
+  font-size: 15px;
+}
+
+.markdown-content p {
+  margin: 8px 0;
+}
+
+.markdown-content ul,
+.markdown-content ol {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.markdown-content li {
+  margin: 4px 0;
+}
+
+.markdown-content strong {
+  font-weight: 600;
+  color: inherit;
+}
+
+.markdown-content em {
+  font-style: italic;
+}
+
+.markdown-content code {
+  background-color: rgba(0, 0, 0, 0.05);
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 13px;
+}
+
+.markdown-content pre {
+  background-color: #f6f8fa;
+  border-radius: 6px;
+  padding: 12px;
+  overflow-x: auto;
+  margin: 12px 0;
+}
+
+.markdown-content pre code {
+  background-color: transparent;
+  padding: 0;
+}
+
+.markdown-content table {
+  border-collapse: collapse;
+  margin: 12px 0;
+  width: 100%;
+  border: 1px solid #d0d7de;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.markdown-content th,
+.markdown-content td {
+  border: 1px solid #d0d7de;
+  padding: 8px 12px;
+  text-align: left;
+  vertical-align: top;
+  word-wrap: break-word;
+  max-width: 200px;
+}
+
+.markdown-content th {
+  background-color: #f6f8fa;
+  font-weight: 600;
+  color: #24292f;
+  border-bottom: 2px solid #d0d7de;
+}
+
+.markdown-content tbody tr:nth-child(even) {
+  background-color: #f8f9fa;
+}
+
+.markdown-content tbody tr:hover {
+  background-color: #f0f3f6;
+}
+
+/* 表格在AI气泡中的样式 */
+.ai-message-bubble .markdown-content table {
+  border-color: #e1e4e8;
+  background-color: white;
+}
+
+.ai-message-bubble .markdown-content th {
+  background-color: #f1f3f4;
+  color: #24292f;
+  border-color: #d1d5da;
+}
+
+.ai-message-bubble .markdown-content td {
+  border-color: #d1d5da;
+  color: #24292f;
+}
+
+.ai-message-bubble .markdown-content tbody tr:nth-child(even) {
+  background-color: #f8f9fa;
+}
+
+.ai-message-bubble .markdown-content tbody tr:hover {
+  background-color: #e6f3ff;
+}
+
+/* 用户气泡中的表格样式 */
+.user-message-bubble .markdown-content table {
+  border-color: rgba(255, 255, 255, 0.4);
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.user-message-bubble .markdown-content th {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: white;
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.user-message-bubble .markdown-content td {
+  border-color: rgba(255, 255, 255, 0.3);
+  color: white;
+}
+
+.user-message-bubble .markdown-content tbody tr:nth-child(even) {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.user-message-bubble .markdown-content tbody tr:hover {
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+/* 用户气泡中的markdown样式调整 */
+.user-message-bubble .markdown-content h1,
+.user-message-bubble .markdown-content h2,
+.user-message-bubble .markdown-content h3,
+.user-message-bubble .markdown-content h4,
+.user-message-bubble .markdown-content h5,
+.user-message-bubble .markdown-content h6 {
+  color: white;
+}
+
+.user-message-bubble .markdown-content code {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+.user-message-bubble .markdown-content pre {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.user-message-bubble .markdown-content th {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.user-message-bubble .markdown-content th,
+.user-message-bubble .markdown-content td {
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.user-message-bubble .markdown-content blockquote {
+  border-left-color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.user-message-bubble .markdown-content hr {
+  background-color: rgba(255, 255, 255, 0.3);
+}
+
+.markdown-content blockquote {
+  border-left: 4px solid #d0d7de;
+  padding-left: 12px;
+  margin: 12px 0;
+  color: #656d76;
+}
+
+.markdown-content hr {
+  border: none;
+  height: 1px;
+  background-color: #d0d7de;
+  margin: 16px 0;
+}
+
+/* 表格在小屏幕上的优化 */
+@media (max-width: 768px) {
+  .markdown-content table {
+    font-size: 12px;
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+  
+  .markdown-content th,
+  .markdown-content td {
+    padding: 6px 8px;
+    min-width: 80px;
+  }
+}
+
+/* 表格数字列的右对齐 */
+.markdown-content td:has-text("PE"),
+.markdown-content td:has-text("%"),
+.markdown-content td:has-text("万"),
+.markdown-content td:has-text("亿") {
+  text-align: right;
+}
+
+/* 表格中的强调文本 */
+.markdown-content table strong {
+  color: #0969da;
+  font-weight: 600;
+}
+
+.user-message-bubble .markdown-content table strong {
+  color: rgba(255, 255, 255, 0.9);
 } 

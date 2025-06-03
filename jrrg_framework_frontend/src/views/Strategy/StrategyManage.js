@@ -41,8 +41,12 @@ import {
   RollbackOutlined,
   FullscreenOutlined,
   DownOutlined,
-  LineChartOutlined
+  LineChartOutlined,
+  UserOutlined,
+  HistoryOutlined
 } from '@ant-design/icons';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { 
   getFavoriteStocks, 
   addFavoriteStock, 
@@ -1574,7 +1578,12 @@ const StrategyManage = () => {
 
       {/* AI分析结果弹窗 */}
       <Modal
-        title="AI分析结果"
+        title={
+          <div className="ai-modal-title">
+            <RobotOutlined />
+            <span>AI智能分析</span>
+          </div>
+        }
         open={aiAnalysisVisible}
         onCancel={() => {
           setAiAnalysisVisible(false);
@@ -1582,95 +1591,150 @@ const StrategyManage = () => {
           setUserMessage('');
           setSelectedStockForAI(null);
         }}
-        footer={[
-          <Button key="close" onClick={() => setAiAnalysisVisible(false)}>
-            关闭
-          </Button>
-        ]}
-        width={800}
+        footer={null}
+        width={900}
+        bodyStyle={{ padding: '20px', maxHeight: '70vh', overflowY: 'auto' }}
       >
-        <Space direction="vertical" style={{ width: '100%' }} size="middle">
+        <div className="ai-chat-container">
           {selectedStockForAI && (
-            <Alert
-              message={`正在分析：${favoriteStocks.find(s => s.stock_code === selectedStockForAI)?.stock_name}(${selectedStockForAI})`}
-              type="info"
-            />
+            <div className="analysis-status">
+              <div className="status-indicator"></div>
+              <span>分析股票：{favoriteStocks.find(s => s.stock_code === selectedStockForAI)?.stock_name}({selectedStockForAI})</span>
+            </div>
           )}
           
-          <div>
-            <Text strong>分析问题：</Text>
-            <TextArea
-              rows={3}
-              value={userMessage}
-              onChange={(e) => setUserMessage(e.target.value)}
-              placeholder="请输入您的分析问题..."
-              style={{ marginTop: 8 }}
-            />
-          </div>
+          {/* 用户消息 */}
+          {userMessage && (
+            <div className="ai-message-container user-message-container">
+              <div className="ai-avatar user-avatar">
+                <UserOutlined />
+              </div>
+              <div className="user-message-bubble">
+                <div>{userMessage}</div>
+                <div className="message-timestamp">刚刚</div>
+              </div>
+            </div>
+          )}
 
-          <Button
-            type="primary"
-            icon={<SendOutlined />}
-            loading={aiLoading}
-            onClick={handleAIAnalysis}
-          >
-            获取分析
-          </Button>
+          {/* AI加载状态 */}
+          {aiLoading && (
+            <div className="ai-message-container">
+              <div className="ai-avatar">
+                <RobotOutlined />
+              </div>
+              <div className="ai-thinking">
+                <span>AI正在分析中</span>
+                <div className="thinking-dots">
+                  <div className="thinking-dot"></div>
+                  <div className="thinking-dot"></div>
+                  <div className="thinking-dot"></div>
+                </div>
+              </div>
+            </div>
+          )}
 
+          {/* AI回复 */}
           {aiResponse && (
-            <div>
-              <Divider orientation="left">
-                <Text strong>AI分析结果</Text>
-              </Divider>
-              <div className="history-detail-answer">
-                <Text>{aiResponse}</Text>
+            <div className="ai-message-container">
+              <div className="ai-avatar">
+                <RobotOutlined />
+              </div>
+              <div className="ai-message-bubble">
+                <div className="markdown-content">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{aiResponse}</ReactMarkdown>
+                </div>
+                <div className="message-timestamp">
+                  {new Date().toLocaleTimeString()}
+                </div>
               </div>
             </div>
           )}
           
-          <div style={{ textAlign: 'right', marginTop: 8 }}>
-            <Text type="secondary">生成时间: {new Date().toLocaleString()}</Text>
+          {/* 输入区域 */}
+          <div className="ai-input-container">
+            <div className="ai-input-wrapper">
+              <div className="ai-input-field">
+                <TextArea
+                  rows={3}
+                  value={userMessage}
+                  onChange={(e) => setUserMessage(e.target.value)}
+                  placeholder="请输入您的分析问题，例如：这只股票当前的技术指标如何？"
+                  onPressEnter={(e) => {
+                    if (!e.shiftKey) {
+                      e.preventDefault();
+                      handleAIAnalysis();
+                    }
+                  }}
+                />
+              </div>
+              <Button
+                className="ai-send-button"
+                icon={<SendOutlined />}
+                loading={aiLoading}
+                onClick={handleAIAnalysis}
+                disabled={!userMessage.trim()}
+              >
+                发送
+              </Button>
+            </div>
+            <div style={{ marginTop: 8, fontSize: '12px', color: '#6c757d' }}>
+              按Shift+Enter换行，Enter发送
+            </div>
           </div>
-        </Space>
+        </div>
       </Modal>
 
       {/* 历史记录详情弹窗 */}
       <Modal
-        title="历史分析详情"
+        title={
+          <div className="ai-modal-title">
+            <HistoryOutlined />
+            <span>历史分析详情</span>
+          </div>
+        }
         open={historyDetailVisible}
         onCancel={() => setHistoryDetailVisible(false)}
         footer={historyModalFooter}
-        width={800}
+        width={900}
+        bodyStyle={{ padding: '20px', maxHeight: '70vh', overflowY: 'auto' }}
       >
         {selectedHistory && (
-          <Space direction="vertical" style={{ width: '100%' }} size="middle">
+          <div className="ai-chat-container">
             {selectedHistory.stock && (
-              <Alert
-                message={`分析股票：${selectedHistory.stock.stock_name}(${selectedHistory.stock.stock_code})`}
-                type="info"
-              />
+              <div className="analysis-status">
+                <div className="status-indicator"></div>
+                <span>分析股票：{selectedHistory.stock.stock_name}({selectedHistory.stock.stock_code})</span>
+              </div>
             )}
             
-            <div>
-              <Text strong>分析问题：</Text>
-              <div className="history-detail-question">
-                <Text>{selectedHistory.question}</Text>
+            {/* 用户问题 */}
+            <div className="ai-message-container user-message-container">
+              <div className="ai-avatar user-avatar">
+                <UserOutlined />
+              </div>
+              <div className="user-message-bubble">
+                <div>{selectedHistory.question}</div>
+                <div className="message-timestamp">
+                  {selectedHistory.timestamp}
+                </div>
               </div>
             </div>
 
-            <div>
-              <Divider orientation="left">
-                <Text strong>AI分析结果</Text>
-              </Divider>
-              <div className="history-detail-answer">
-                <Text>{selectedHistory.answer}</Text>
+            {/* AI回复 */}
+            <div className="ai-message-container">
+              <div className="ai-avatar">
+                <RobotOutlined />
+              </div>
+              <div className="ai-message-bubble">
+                <div className="markdown-content">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedHistory.answer}</ReactMarkdown>
+                </div>
+                <div className="message-timestamp">
+                  {selectedHistory.timestamp}
+                </div>
               </div>
             </div>
-            
-            <div style={{ textAlign: 'right' }}>
-              <Text type="secondary">分析时间: {selectedHistory.timestamp}</Text>
-            </div>
-          </Space>
+          </div>
         )}
       </Modal>
 

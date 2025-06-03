@@ -707,15 +707,15 @@ const Home = () => {
                 </Tag>
               </Tooltip>
             </div>
-            <Button 
-              type="link" 
-              icon={<ReloadOutlined spin={loading} />}
-              onClick={handleRefreshIndexes}
-              disabled={loading}
+          <Button 
+            type="link" 
+            icon={<ReloadOutlined spin={loading} />}
+            onClick={handleRefreshIndexes}
+            disabled={loading}
               size="small"
-            >
-              刷新指数
-            </Button>
+          >
+            刷新指数
+          </Button>
           </div>
         </Col>
         
