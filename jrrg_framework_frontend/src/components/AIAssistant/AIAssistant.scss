@@ -72,13 +72,18 @@
   // 抽屉标题样式
   .assistant-drawer-title {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-end; // 让按钮靠右
     align-items: center;
     width: 100%;
+    height: 30px; // 减小高度
+    
+    .drawer-spacer {
+      flex: 1;
+    }
     
     .drawer-actions {
       display: flex;
-      gap: 8px;
+      gap: 4px; // 减小按钮间距
     }
   }
   
@@ -89,7 +94,7 @@
     }
     
     .assistant-iframe {
-      height: calc(100vh - 120px - 56px) !important; // 减去标题高度和输入框高度
+      height: calc(100vh - 40px) !important; // 减少标题高度
     }
   }
 
@@ -99,8 +104,16 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    height: calc(100% - 56px); // 减去输入框高度
+    height: 100%; // 填满整个高度，因为已经没有footer
     position: relative; // 为聊天历史panel做准备
+  }
+
+  // 极小化头部高度
+  .ant-drawer-header {
+    padding: 4px 8px; // 减少上下padding
+    height: auto;
+    min-height: 30px; // 减少最小高度
+    border-bottom: none; // 移除下边框
   }
 
   // iframe样式
@@ -109,8 +122,8 @@
     height: 100%;
     border: none;
     flex: 1;
-    // 如果需要隐藏iframe上部的输入框
-    margin-top: -60px; // 你可能需要根据实际iframe调整这个值
+    // 增大负margin-top值，解决原网页内容被覆盖的问题
+    margin-top: -170px; // 进一步增加负margin以确保内容完全显示
   }
 
   // 加载指示器容器样式
@@ -159,66 +172,6 @@
         margin-bottom: 16px;
         color: #8c8c8c;
       }
-    }
-  }
-  
-  // 欢迎消息容器样式
-  .welcome-message-container {
-    position: absolute;
-    top: 20px;
-    left: 20px;
-    right: 20px;
-    z-index: 2;
-    pointer-events: none; // 允许点击穿透
-  }
-  
-  // 欢迎消息样式
-  .welcome-message {
-    background-color: #f0f5ff;
-    color: #1668dc;
-    padding: 12px 16px;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-    font-size: 14px;
-    line-height: 1.6;
-    max-width: 90%;
-    position: relative; // 为关闭按钮定位
-    pointer-events: auto; // 确保可以点击
-    
-    // 关闭按钮样式
-    .welcome-close-btn {
-      position: absolute;
-      top: 2px;
-      right: 2px;
-      color: #8c8c8c;
-      opacity: 0.7;
-      height: 20px;
-      width: 20px;
-      padding: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      
-      &:hover {
-        opacity: 1;
-        color: #1668dc;
-      }
-    }
-    
-    // 打字机光标样式
-    .typing-cursor {
-      display: inline-block;
-      width: 2px;
-      height: 16px;
-      background-color: #1668dc;
-      margin-left: 2px;
-      animation: blink 0.7s infinite;
-      vertical-align: middle;
-    }
-    
-    @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0; }
     }
   }
   
@@ -283,59 +236,6 @@
       }
     }
   }
-  
-  // 输入框容器样式
-  .assistant-input-container {
-    padding: 8px 16px;
-    background-color: #fff;
-    border-top: 1px solid #f0f0f0;
-    
-    // 快速提问区域样式
-    .quick-questions {
-      margin-bottom: 8px;
-      
-      .quick-question-tag {
-        cursor: pointer;
-        margin-bottom: 4px;
-        transition: all 0.3s;
-        
-        &:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 2px 6px rgba(24, 144, 255, 0.25);
-        }
-        
-        &:active {
-          transform: translateY(0);
-          background-color: #1890ff !important;
-          color: white !important;
-        }
-      }
-    }
-    
-    .ant-input {
-      border-radius: 20px;
-      
-      &:focus {
-        box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
-      }
-    }
-    
-    .ant-btn {
-      border: none;
-      box-shadow: none;
-      
-      &:hover {
-        background-color: transparent;
-        color: #40a9ff;
-      }
-    }
-  }
-  
-  // 覆盖抽屉footer样式
-  .ant-drawer-footer {
-    padding: 0;
-    border-top: none;
-  }
 }
 
 // 深色主题适配
@@ -363,37 +263,9 @@
     }
   }
   
-  .welcome-message {
-    background-color: #111b26 !important;
-    color: #69c0ff !important;
-    
-    .welcome-close-btn {
-      color: #8c8c8c !important;
-      
-      &:hover {
-        color: #69c0ff !important;
-      }
-    }
-  }
-  
   .drag-handle {
     background-color: rgba(30, 30, 30, 0.8) !important;
     color: #8c8c8c !important;
-  }
-  
-  .assistant-input-container {
-    background-color: #141414 !important;
-    border-color: #303030 !important;
-    
-    .ant-input {
-      background-color: #1f1f1f;
-      border-color: #434343;
-      color: rgba(255, 255, 255, 0.85);
-      
-      &::placeholder {
-        color: rgba(255, 255, 255, 0.3);
-      }
-    }
   }
   
   .chat-history-panel {
@@ -414,9 +286,5 @@
     .chat-history-empty {
       color: #5f5f5f !important;
     }
-  }
-  
-  .quick-question-tag {
-    background-color: #112a45 !important;
   }
 } 
