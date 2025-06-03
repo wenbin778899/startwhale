@@ -68,12 +68,20 @@ export function getStockIntraday(symbol) {
 }
 
 /**
- * 获取微博舆情热门股票
- * @param {string} timePeriod - 时间周期，可选值：CNHOUR2, CNHOUR6, CNHOUR12, CNHOUR24, CNDAY7, CNDAY30
+ * 获取风险警示板股票数据
+ * @param {number} limit - 返回数量限制，默认20
  * @returns {Promise}
  */
-export function getHotStocks(timePeriod = 'CNHOUR12') {
-  return http.get('/api/stock/hot_stocks', {
-    params: { time_period: timePeriod }
+export function getRiskWarningStocks(limit = 20) {
+  return http.get('/api/stock/risk_warning', {
+    params: { limit }
   });
+}
+
+/**
+ * 获取东方财富行业板块数据
+ * @returns {Promise}
+ */
+export function getIndustryBoards() {
+  return http.get('/api/stock/industry-boards');
 } 

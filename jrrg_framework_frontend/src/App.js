@@ -15,6 +15,8 @@ import UserPortrait from './views/UserProfile/UserPortrait';
 import Home from './views/Home/Home';
 import PortfolioManagement from './views/Portfolio/PortfolioManagement';
 import BacktestView from './views/Backtest/BacktestView';
+import IndustryAnalysis from './views/Industry/IndustryAnalysis';
+import RealtimeNews from './views/News/RealtimeNews';
 import { useNavigate } from 'react-router-dom';
 import { setNavigate } from './utils/http';
 import RequierAuth from './components/RequireAuth/RequireAuth';
@@ -53,6 +55,8 @@ function AppRoutes() {
           <Route path="/stock" element={<StockQuery />} />
           <Route path="/portfolio" element={<PortfolioManagement />} />
           <Route path="/trade" element={<div>Trade</div>} />
+          <Route path="/industry" element={<IndustryAnalysis />} />
+          <Route path="/news" element={<RealtimeNews />} />
           <Route path="/user/profile" element={<UserProfile />} />
           <Route path="/user/detail" element={<ProfileDetail />} />
           <Route path="/user/portrait" element={<UserPortrait />} />

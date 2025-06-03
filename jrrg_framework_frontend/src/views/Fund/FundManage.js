@@ -32,7 +32,7 @@ import {
   RobotOutlined,
   SendOutlined,
   TrendingUpOutlined,
-  TrendingDownOutlined,
+  SecurityScanFilled,
   InfoCircleOutlined,
   ReloadOutlined,
   HeartOutlined,

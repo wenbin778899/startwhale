@@ -6,7 +6,7 @@ import {
 } from 'antd';
 import { 
   SearchOutlined, InfoCircleOutlined, LinkOutlined, ReloadOutlined,
-  RiseOutlined, TrendingDownOutlined, DollarOutlined,
+  RiseOutlined, SecurityScanFilled, DollarOutlined,
   LineChartOutlined, BarChartOutlined, StockOutlined, NotificationOutlined,
   FallOutlined, SwapOutlined
 } from '@ant-design/icons';

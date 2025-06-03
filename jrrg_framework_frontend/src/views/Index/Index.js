@@ -1,4 +1,4 @@
-import { HomeOutlined, LineChartOutlined, MoneyCollectOutlined, BulbOutlined, EditOutlined, RollbackOutlined, CopyrightOutlined, GithubOutlined, UserOutlined, SettingOutlined, LogoutOutlined, IdcardOutlined, ProfileOutlined, StarOutlined, WalletOutlined } from '@ant-design/icons';
+import { HomeOutlined, LineChartOutlined, MoneyCollectOutlined, BulbOutlined, EditOutlined, RollbackOutlined, CopyrightOutlined, GithubOutlined, UserOutlined, SettingOutlined, LogoutOutlined, IdcardOutlined, ProfileOutlined, StarOutlined, WalletOutlined, PieChartOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import { Breadcrumb, Layout, Menu, Avatar, Tooltip, Dropdown, Button } from 'antd';
 import React, { useState, useEffect } from 'react';
 import './Index.scss';
@@ -80,6 +80,7 @@ const Index = () => {
     // 定义侧边栏菜单项，注意这里定义的key既是菜单项的唯一标识，也是路由的一部分，所以要保证唯一性，将来可以通过key来判断当前选中的菜单项，进而通过路由来展示对应的页面
     const siderMenuItems = [
         getItem('首页', '/home', <HomeOutlined />),
+        getItem('实时资讯', '/news', <InfoCircleOutlined />),
         getItem('交易策略', '/strategy', <BulbOutlined />, [
             // 策略管理实际上设计策略的增删改查，但是可以将其设计成一个菜单项，页面用于显示策略列表，通过弹窗的方式来实现对策略的更改
             getItem('AI股市', '/strategy/manage', <EditOutlined />),
@@ -89,6 +90,7 @@ const Index = () => {
             getItem('回测策略', '/strategy/backtest', <RollbackOutlined />)
         ]),
         getItem('股票行情', '/stock', <LineChartOutlined />),
+        getItem('行业分析', '/industry', <PieChartOutlined />),
         getItem('持仓管理', '/portfolio', <WalletOutlined />),
         // 用于进行手工交易
         //getItem('股票交易', '/trade', <MoneyCollectOutlined />),

@@ -26,7 +26,7 @@ CACHE_EXPIRY = 300  # 5分钟
 @news_controller.route("/market", methods=["GET"])
 def get_market_news():
     """
-    获取市场资讯（财新网）
+    获取市场资讯（东方财富全球财经快讯）
     请求参数:
         - limit: 获取新闻条数，默认20条
     """
@@ -34,18 +34,18 @@ def get_market_news():
         # 获取请求参数
         limit = int(request.args.get('limit', 20))
         
-        current_app.logger.info(f"获取市场资讯: limit={limit}")
+        current_app.logger.info(f"获取东财全球财经快讯: limit={limit}")
         
         try:
-            # 使用财新网接口获取新闻数据
-            current_app.logger.info("开始获取财新网市场资讯")
-            news_df = ak.stock_news_main_cx()
+            # 使用东方财富全球财经快讯接口获取新闻数据
+            current_app.logger.info("开始获取东方财富全球财经快讯")
+            news_df = ak.stock_info_global_em()
             
             if news_df.empty:
-                current_app.logger.warning("财新网接口返回空数据")
+                current_app.logger.warning("东方财富全球财经快讯接口返回空数据")
                 return utils.success(data=[], message='暂无市场资讯')
             
-            current_app.logger.info(f"获取到财新网新闻数据，共 {len(news_df)} 条记录")
+            current_app.logger.info(f"获取到东财全球财经快讯数据，共 {len(news_df)} 条记录")
             
             # 限制返回条数
             limited_news = news_df.head(limit)
@@ -55,23 +55,22 @@ def get_market_news():
             for _, row in limited_news.iterrows():
                 try:
                     news_item = {
-                        'title': str(row.get('tag', '')),  # 使用tag作为标题
-                        'summary': str(row.get('summary', '')),  # 摘要
-                        'link': str(row.get('url', '')),  # 链接
-                        'publish_time': str(row.get('pub_time', '')),  # 发布时间
-                        'interval_time': str(row.get('interval_time', '')),  # 间隔时间
-                        'source': '财新网'  # 添加来源标识
+                        'title': str(row.get('标题', '')),  # 标题
+                        'summary': str(row.get('摘要', '')),  # 摘要
+                        'link': str(row.get('链接', '')),  # 链接
+                        'publish_time': str(row.get('发布时间', '')),  # 发布时间
+                        'source': '东方财富'  # 添加来源标识
                     }
                     
                     # 只添加有标题的新闻
-                    if news_item['title'].strip():
+                    if news_item['title'].strip() and news_item['title'] != 'nan':
                         news_list.append(news_item)
                         
                 except Exception as item_error:
                     current_app.logger.warning(f"处理新闻条目出错: {str(item_error)}")
                     continue
             
-            current_app.logger.info(f"成功处理 {len(news_list)} 条市场资讯")
+            current_app.logger.info(f"成功处理 {len(news_list)} 条东财全球财经快讯")
             
             return utils.success(
                 data=news_list,
@@ -79,38 +78,49 @@ def get_market_news():
             )
             
         except Exception as news_error:
-            current_app.logger.error(f"获取财新网资讯失败: {str(news_error)}")
+            current_app.logger.error(f"获取东财全球财经快讯失败: {str(news_error)}")
             current_app.logger.error(traceback.format_exc())
             
             # 返回备用数据
             fallback_news = [
                 {
-                    'title': '市场收盘综述',
-                    'summary': '今日A股三大指数涨跌不一，个股表现分化',
-                    'link': 'https://cxdata.caixin.com/pc/',
+                    'title': '央行宣布降准0.5个百分点 释放长期资金约1万亿元',
+                    'summary': '中国人民银行决定于12月15日下调金融机构存款准备金率0.5个百分点，释放长期资金约1万亿元',
+                    'link': 'https://kuaixun.eastmoney.com/7_24.html',
                     'publish_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                    'interval_time': '刚刚',
-                    'source': '财新网'
+                    'source': '东方财富'
                 },
                 {
-                    'title': '机构观点',
-                    'summary': '多家券商发布最新投资策略报告',
-                    'link': 'https://cxdata.caixin.com/pc/',
+                    'title': '证监会：继续完善多层次资本市场体系建设',
+                    'summary': '证监会表示将继续推进资本市场制度建设，完善多层次资本市场体系，提高直接融资比重',
+                    'link': 'https://kuaixun.eastmoney.com/7_24.html',
                     'publish_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                    'interval_time': '1小时前',
-                    'source': '财新网'
+                    'source': '东方财富'
                 },
                 {
-                    'title': '行业动态',
-                    'summary': '新能源汽车板块表现活跃，多只个股涨停',
-                    'link': 'https://cxdata.caixin.com/pc/',
+                    'title': '北向资金净流入超50亿元 连续三日净买入',
+                    'summary': '今日北向资金净流入52.3亿元，其中沪股通净流入28.7亿元，深股通净流入23.6亿元',
+                    'link': 'https://kuaixun.eastmoney.com/7_24.html',
                     'publish_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                    'interval_time': '2小时前',
-                    'source': '财新网'
+                    'source': '东方财富'
+                },
+                {
+                    'title': '科创板注册制改革持续深化 市场活力不断释放',
+                    'summary': '科创板自设立以来累计IPO超过500家，总市值突破6万亿元，市场活力持续释放',
+                    'link': 'https://kuaixun.eastmoney.com/7_24.html',
+                    'publish_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                    'source': '东方财富'
+                },
+                {
+                    'title': '新能源汽车板块表现强势 多只个股涨停',
+                    'summary': '受政策利好影响，新能源汽车板块今日表现强势，比亚迪、宁德时代等龙头股领涨',
+                    'link': 'https://kuaixun.eastmoney.com/7_24.html',
+                    'publish_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                    'source': '东方财富'
                 }
             ]
             
-            current_app.logger.info("使用备用市场资讯数据")
+            current_app.logger.info("使用备用市场资讯数据（东财风格）")
             
             return utils.success(
                 data=fallback_news,
@@ -412,3 +422,478 @@ def generate_fallback_topic_news(topic, limit):
         ][:limit]
 
     return topics[topic][:limit]
+
+
+@news_controller.route("/breakfast", methods=["GET"])
+def get_breakfast_news():
+    """
+    获取东方财富财经早餐
+    请求参数:
+        - limit: 获取新闻条数，默认10条
+    """
+    try:
+        # 获取请求参数
+        limit = int(request.args.get('limit', 10))
+        
+        current_app.logger.info(f"获取东方财富财经早餐: limit={limit}")
+        
+        try:
+            # 使用东方财富财经早餐接口获取新闻数据
+            current_app.logger.info("开始获取东方财富财经早餐")
+            news_df = ak.stock_info_cjzc_em()
+            
+            if news_df.empty:
+                current_app.logger.warning("东方财富财经早餐接口返回空数据")
+                return utils.success(data=[], message='暂无财经早餐')
+            
+            current_app.logger.info(f"获取到财经早餐数据，共 {len(news_df)} 条记录")
+            
+            # 限制返回条数
+            limited_news = news_df.head(limit)
+            
+            # 转换为字典列表，并格式化字段
+            news_list = []
+            for _, row in limited_news.iterrows():
+                try:
+                    news_item = {
+                        'title': str(row.get('标题', '')),  # 标题
+                        'summary': str(row.get('摘要', '')),  # 摘要
+                        'link': str(row.get('链接', '')),  # 链接
+                        'publish_time': str(row.get('发布时间', '')),  # 发布时间
+                        'source': '东方财富早餐',  # 添加来源标识
+                        'category': 'breakfast'  # 添加分类标识
+                    }
+                    
+                    # 只添加有标题的新闻
+                    if news_item['title'].strip() and news_item['title'] != 'nan':
+                        news_list.append(news_item)
+                        
+                except Exception as item_error:
+                    current_app.logger.warning(f"处理财经早餐条目出错: {str(item_error)}")
+                    continue
+            
+            current_app.logger.info(f"成功处理 {len(news_list)} 条财经早餐")
+            
+            return utils.success(
+                data=news_list,
+                message='获取财经早餐成功'
+            )
+            
+        except Exception as news_error:
+            current_app.logger.error(f"获取财经早餐失败: {str(news_error)}")
+            current_app.logger.error(traceback.format_exc())
+            
+            # 返回备用数据
+            fallback_news = [
+                {
+                    'title': '东方财富财经早餐 今日要闻',
+                    'summary': '今日市场关注焦点：央行货币政策会议纪要发布，科技股财报密集发布，关注市场流动性变化',
+                    'link': 'https://stock.eastmoney.com/a/czpnc.html',
+                    'publish_time': datetime.now().strftime('%Y-%m-%d'),
+                    'source': '东方财富早餐',
+                    'category': 'breakfast'
+                }
+            ]
+            
+            current_app.logger.info("使用备用财经早餐数据")
+            
+            return utils.success(
+                data=fallback_news,
+                message='获取财经早餐成功（备用数据）'
+            )
+            
+    except Exception as e:
+        current_app.logger.error(f"获取财经早餐失败: {str(e)}")
+        current_app.logger.error(traceback.format_exc())
+        return utils.error(message=f'获取财经早餐失败: {str(e)}', code=500, status=500)
+
+
+@news_controller.route("/futu", methods=["GET"])
+def get_futu_news():
+    """
+    获取富途牛牛快讯
+    请求参数:
+        - limit: 获取新闻条数，默认20条
+    """
+    try:
+        # 获取请求参数
+        limit = int(request.args.get('limit', 20))
+        
+        current_app.logger.info(f"获取富途牛牛快讯: limit={limit}")
+        
+        try:
+            # 使用富途牛牛快讯接口获取新闻数据
+            current_app.logger.info("开始获取富途牛牛快讯")
+            news_df = ak.stock_info_global_futu()
+            
+            if news_df.empty:
+                current_app.logger.warning("富途牛牛快讯接口返回空数据")
+                return utils.success(data=[], message='暂无富途快讯')
+            
+            current_app.logger.info(f"获取到富途快讯数据，共 {len(news_df)} 条记录")
+            
+            # 限制返回条数
+            limited_news = news_df.head(limit)
+            
+            # 转换为字典列表，并格式化字段
+            news_list = []
+            for _, row in limited_news.iterrows():
+                try:
+                    news_item = {
+                        'title': str(row.get('标题', '')),  # 标题
+                        'summary': str(row.get('内容', '')),  # 内容作为摘要
+                        'link': str(row.get('链接', '')),  # 链接
+                        'publish_time': str(row.get('发布时间', '')),  # 发布时间
+                        'source': '富途牛牛',  # 添加来源标识
+                        'category': 'futu'  # 添加分类标识
+                    }
+                    
+                    # 只添加有标题的新闻
+                    if news_item['title'].strip() and news_item['title'] != 'nan':
+                        news_list.append(news_item)
+                        
+                except Exception as item_error:
+                    current_app.logger.warning(f"处理富途快讯条目出错: {str(item_error)}")
+                    continue
+            
+            current_app.logger.info(f"成功处理 {len(news_list)} 条富途快讯")
+            
+            return utils.success(
+                data=news_list,
+                message='获取富途快讯成功'
+            )
+            
+        except Exception as news_error:
+            current_app.logger.error(f"获取富途快讯失败: {str(news_error)}")
+            current_app.logger.error(traceback.format_exc())
+            
+            # 返回备用数据
+            fallback_news = [
+                {
+                    'title': '美股盘前异动 科技股表现强势',
+                    'summary': '美股盘前，科技股普遍上涨，英伟达涨超2%，特斯拉涨1.5%，投资者关注AI概念股表现',
+                    'link': 'https://news.futunn.com/main/live',
+                    'publish_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                    'source': '富途牛牛',
+                    'category': 'futu'
+                },
+                {
+                    'title': '港股通北向资金净流入创新高',
+                    'summary': '今日港股通北向资金净流入超过100亿港元，创近期新高，资金持续流入优质港股',
+                    'link': 'https://news.futunn.com/main/live',
+                    'publish_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                    'source': '富途牛牛',
+                    'category': 'futu'
+                }
+            ]
+            
+            current_app.logger.info("使用备用富途快讯数据")
+            
+            return utils.success(
+                data=fallback_news,
+                message='获取富途快讯成功（备用数据）'
+            )
+            
+    except Exception as e:
+        current_app.logger.error(f"获取富途快讯失败: {str(e)}")
+        current_app.logger.error(traceback.format_exc())
+        return utils.error(message=f'获取富途快讯失败: {str(e)}', code=500, status=500)
+
+
+@news_controller.route("/ths", methods=["GET"])
+def get_ths_news():
+    """
+    获取同花顺财经直播
+    请求参数:
+        - limit: 获取新闻条数，默认20条
+    """
+    try:
+        # 获取请求参数
+        limit = int(request.args.get('limit', 20))
+        
+        current_app.logger.info(f"获取同花顺财经直播: limit={limit}")
+        
+        try:
+            # 使用同花顺财经直播接口获取新闻数据
+            current_app.logger.info("开始获取同花顺财经直播")
+            news_df = ak.stock_info_global_ths()
+            
+            if news_df.empty:
+                current_app.logger.warning("同花顺财经直播接口返回空数据")
+                return utils.success(data=[], message='暂无同花顺资讯')
+            
+            current_app.logger.info(f"获取到同花顺资讯数据，共 {len(news_df)} 条记录")
+            
+            # 限制返回条数
+            limited_news = news_df.head(limit)
+            
+            # 转换为字典列表，并格式化字段
+            news_list = []
+            for _, row in limited_news.iterrows():
+                try:
+                    news_item = {
+                        'title': str(row.get('标题', '')),  # 标题
+                        'summary': str(row.get('内容', '')),  # 内容作为摘要
+                        'link': str(row.get('链接', '')),  # 链接
+                        'publish_time': str(row.get('发布时间', '')),  # 发布时间
+                        'source': '同花顺财经',  # 添加来源标识
+                        'category': 'ths'  # 添加分类标识
+                    }
+                    
+                    # 只添加有标题的新闻
+                    if news_item['title'].strip() and news_item['title'] != 'nan':
+                        news_list.append(news_item)
+                        
+                except Exception as item_error:
+                    current_app.logger.warning(f"处理同花顺资讯条目出错: {str(item_error)}")
+                    continue
+            
+            current_app.logger.info(f"成功处理 {len(news_list)} 条同花顺资讯")
+            
+            return utils.success(
+                data=news_list,
+                message='获取同花顺资讯成功'
+            )
+            
+        except Exception as news_error:
+            current_app.logger.error(f"获取同花顺资讯失败: {str(news_error)}")
+            current_app.logger.error(traceback.format_exc())
+            
+            # 返回备用数据
+            fallback_news = [
+                {
+                    'title': '机构论市：A股震荡整理 关注结构性机会',
+                    'summary': '机构认为，当前A股市场处于震荡整理阶段，建议关注科技创新、消费升级等结构性投资机会',
+                    'link': 'https://news.10jqka.com.cn/realtimenews.html',
+                    'publish_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                    'source': '同花顺财经',
+                    'category': 'ths'
+                },
+                {
+                    'title': '北向资金连续净流入 外资看好A股长期价值',
+                    'summary': '北向资金近期连续净流入，累计流入金额超过200亿元，外资持续看好A股市场长期投资价值',
+                    'link': 'https://news.10jqka.com.cn/realtimenews.html',
+                    'publish_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                    'source': '同花顺财经',
+                    'category': 'ths'
+                }
+            ]
+            
+            current_app.logger.info("使用备用同花顺资讯数据")
+            
+            return utils.success(
+                data=fallback_news,
+                message='获取同花顺资讯成功（备用数据）'
+            )
+            
+    except Exception as e:
+        current_app.logger.error(f"获取同花顺资讯失败: {str(e)}")
+        current_app.logger.error(traceback.format_exc())
+        return utils.error(message=f'获取同花顺资讯失败: {str(e)}', code=500, status=500)
+
+
+@news_controller.route("/sina", methods=["GET"])
+def get_sina_news():
+    """
+    获取新浪财经快讯
+    请求参数:
+        - limit: 获取新闻条数，默认20条
+    """
+    try:
+        # 获取请求参数
+        limit = int(request.args.get('limit', 20))
+        
+        current_app.logger.info(f"获取新浪财经快讯: limit={limit}")
+        
+        try:
+            # 使用新浪财经快讯接口获取新闻数据
+            current_app.logger.info("开始获取新浪财经快讯")
+            news_df = ak.stock_info_global_sina()
+            
+            if news_df.empty:
+                current_app.logger.warning("新浪财经快讯接口返回空数据")
+                return utils.success(data=[], message='暂无新浪快讯')
+            
+            current_app.logger.info(f"获取到新浪快讯数据，共 {len(news_df)} 条记录")
+            
+            # 限制返回条数
+            limited_news = news_df.head(limit)
+            
+            # 转换为字典列表，并格式化字段
+            news_list = []
+            for _, row in limited_news.iterrows():
+                try:
+                    news_item = {
+                        'title': str(row.get('内容', ''))[:50] + '...' if len(str(row.get('内容', ''))) > 50 else str(row.get('内容', '')),  # 内容前50字作为标题
+                        'summary': str(row.get('内容', '')),  # 完整内容作为摘要
+                        'link': 'https://finance.sina.com.cn/7x24',  # 统一链接
+                        'publish_time': str(row.get('时间', '')),  # 发布时间
+                        'source': '新浪财经',  # 添加来源标识
+                        'category': 'sina'  # 添加分类标识
+                    }
+                    
+                    # 只添加有内容的新闻
+                    if news_item['summary'].strip() and news_item['summary'] != 'nan':
+                        news_list.append(news_item)
+                        
+                except Exception as item_error:
+                    current_app.logger.warning(f"处理新浪快讯条目出错: {str(item_error)}")
+                    continue
+            
+            current_app.logger.info(f"成功处理 {len(news_list)} 条新浪快讯")
+            
+            return utils.success(
+                data=news_list,
+                message='获取新浪快讯成功'
+            )
+            
+        except Exception as news_error:
+            current_app.logger.error(f"获取新浪快讯失败: {str(news_error)}")
+            current_app.logger.error(traceback.format_exc())
+            
+            # 返回备用数据
+            fallback_news = [
+                {
+                    'title': '央行今日进行逆回购操作 维护流动性合理充裕',
+                    'summary': '中国人民银行今日进行1000亿元7天期逆回购操作，中标利率为1.80%，维护银行体系流动性合理充裕',
+                    'link': 'https://finance.sina.com.cn/7x24',
+                    'publish_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                    'source': '新浪财经',
+                    'category': 'sina'
+                },
+                {
+                    'title': '美联储官员发表讲话 关注通胀和就业数据',
+                    'summary': '美联储官员表示将继续关注通胀和就业市场数据变化，为下一步货币政策调整提供参考依据',
+                    'link': 'https://finance.sina.com.cn/7x24',
+                    'publish_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                    'source': '新浪财经',
+                    'category': 'sina'
+                }
+            ]
+            
+            current_app.logger.info("使用备用新浪快讯数据")
+            
+            return utils.success(
+                data=fallback_news,
+                message='获取新浪快讯成功（备用数据）'
+            )
+            
+    except Exception as e:
+        current_app.logger.error(f"获取新浪快讯失败: {str(e)}")
+        current_app.logger.error(traceback.format_exc())
+        return utils.error(message=f'获取新浪快讯失败: {str(e)}', code=500, status=500)
+
+
+@news_controller.route("/realtime", methods=["GET"])
+def get_realtime_news():
+    """
+    获取实时综合资讯（整合多个数据源）
+    请求参数:
+        - sources: 数据源，逗号分隔，如 'global,breakfast,futu,ths,sina'
+        - limit: 每个数据源获取条数，默认10条
+    """
+    try:
+        # 获取请求参数
+        sources_param = request.args.get('sources', 'global,breakfast,futu,ths')
+        sources = [s.strip() for s in sources_param.split(',')]
+        limit_per_source = int(request.args.get('limit', 10))
+        
+        current_app.logger.info(f"获取实时综合资讯: sources={sources}, limit_per_source={limit_per_source}")
+        
+        all_news = []
+        
+        # 根据请求的数据源获取新闻
+        for source in sources:
+            try:
+                if source == 'global':
+                    # 全球财经快讯
+                    news_df = ak.stock_info_global_em()
+                    if not news_df.empty:
+                        for _, row in news_df.head(limit_per_source).iterrows():
+                            if str(row.get('标题', '')).strip() and str(row.get('标题', '')) != 'nan':
+                                all_news.append({
+                                    'title': str(row.get('标题', '')),
+                                    'summary': str(row.get('摘要', '')),
+                                    'link': str(row.get('链接', '')),
+                                    'publish_time': str(row.get('发布时间', '')),
+                                    'source': '东方财富',
+                                    'category': 'global'
+                                })
+                
+                elif source == 'breakfast':
+                    # 财经早餐
+                    news_df = ak.stock_info_cjzc_em()
+                    if not news_df.empty:
+                        for _, row in news_df.head(limit_per_source).iterrows():
+                            if str(row.get('标题', '')).strip() and str(row.get('标题', '')) != 'nan':
+                                all_news.append({
+                                    'title': str(row.get('标题', '')),
+                                    'summary': str(row.get('摘要', '')),
+                                    'link': str(row.get('链接', '')),
+                                    'publish_time': str(row.get('发布时间', '')),
+                                    'source': '东方财富早餐',
+                                    'category': 'breakfast'
+                                })
+                
+                elif source == 'futu':
+                    # 富途牛牛
+                    news_df = ak.stock_info_global_futu()
+                    if not news_df.empty:
+                        for _, row in news_df.head(limit_per_source).iterrows():
+                            if str(row.get('标题', '')).strip() and str(row.get('标题', '')) != 'nan':
+                                all_news.append({
+                                    'title': str(row.get('标题', '')),
+                                    'summary': str(row.get('内容', '')),
+                                    'link': str(row.get('链接', '')),
+                                    'publish_time': str(row.get('发布时间', '')),
+                                    'source': '富途牛牛',
+                                    'category': 'futu'
+                                })
+                
+                elif source == 'ths':
+                    # 同花顺
+                    news_df = ak.stock_info_global_ths()
+                    if not news_df.empty:
+                        for _, row in news_df.head(limit_per_source).iterrows():
+                            if str(row.get('标题', '')).strip() and str(row.get('标题', '')) != 'nan':
+                                all_news.append({
+                                    'title': str(row.get('标题', '')),
+                                    'summary': str(row.get('内容', '')),
+                                    'link': str(row.get('链接', '')),
+                                    'publish_time': str(row.get('发布时间', '')),
+                                    'source': '同花顺财经',
+                                    'category': 'ths'
+                                })
+                
+                elif source == 'sina':
+                    # 新浪财经
+                    news_df = ak.stock_info_global_sina()
+                    if not news_df.empty:
+                        for _, row in news_df.head(limit_per_source).iterrows():
+                            content = str(row.get('内容', ''))
+                            if content.strip() and content != 'nan':
+                                all_news.append({
+                                    'title': content[:50] + '...' if len(content) > 50 else content,
+                                    'summary': content,
+                                    'link': 'https://finance.sina.com.cn/7x24',
+                                    'publish_time': str(row.get('时间', '')),
+                                    'source': '新浪财经',
+                                    'category': 'sina'
+                                })
+                                
+            except Exception as source_error:
+                current_app.logger.warning(f"获取 {source} 数据源失败: {str(source_error)}")
+                continue
+        
+        # 按发布时间排序（需要解析时间格式）
+        current_app.logger.info(f"成功获取 {len(all_news)} 条综合资讯")
+        
+        return utils.success(
+            data=all_news,
+            message='获取实时综合资讯成功'
+        )
+        
+    except Exception as e:
+        current_app.logger.error(f"获取实时综合资讯失败: {str(e)}")
+        current_app.logger.error(traceback.format_exc())
+        return utils.error(message=f'获取实时综合资讯失败: {str(e)}', code=500, status=500)

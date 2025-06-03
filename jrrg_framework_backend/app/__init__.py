@@ -49,9 +49,14 @@ def create_app():
             "/strategy/save-analysis-history",
             "/user-profile/questionnaire",
             "/user-profile/profile",
-            "/news/market",  # 新增的新闻接口
-            "/news/topic",   # 新增的新闻接口
-            "/portfolio",    # 新增的持仓管理接口
+            "/news/market",  # 东财全球财经快讯
+            "/news/breakfast",  # 东财财经早餐
+            "/news/futu",  # 富途牛牛快讯
+            "/news/ths",   # 同花顺财经直播
+            "/news/sina",  # 新浪财经快讯
+            "/news/realtime",  # 实时综合资讯
+            "/news/topic",   # 主题新闻
+            "/portfolio",    # 持仓管理接口
             "/portfolio/<portfolio_id>",
             "/portfolio/<portfolio_id>/stocks",
             "/portfolio/<portfolio_id>/trades",

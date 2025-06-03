@@ -31,7 +31,7 @@ import {
   RobotOutlined,
   SendOutlined,
   TrendingUpOutlined,
-  TrendingDownOutlined,
+  SecurityScanFilled,
   InfoCircleOutlined,
   ReloadOutlined,
   HeartOutlined,
@@ -177,8 +177,8 @@ const IntradayChart = ({ data }) => {
       }
       
       // 垂直网格线（时间）
-      const timePoints = [0, 0.25, 0.5, 0.75, 1];
-      const timeLabels = ['09:30', '10:45', '12:00', '13:45', '15:00'];
+      const timePoints = [0, 0.25, 0.75, 1];
+      const timeLabels = ['09:30', '10:45', '13:45', '15:00'];
       
       timePoints.forEach((ratio, index) => {
         const x = paddingLeft + ratio * plotWidth;

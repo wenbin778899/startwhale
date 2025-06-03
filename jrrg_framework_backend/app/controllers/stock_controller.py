@@ -810,94 +810,312 @@ def get_stock_intraday():
         current_app.logger.error(traceback.format_exc())
         return utils.error(message=f'获取分时数据失败: {str(e)}', code=500, status=500)
 
-@stock_controller.route('/hot_stocks', methods=['GET'])
-def get_hot_stocks():
+@stock_controller.route('/risk_warning', methods=['GET'])
+def get_risk_warning_stocks():
     """
-    获取微博舆情热门股票
+    获取风险警示板股票数据
     请求参数:
-        - time_period: 时间周期（可选），默认CNHOUR12
-                      CNHOUR2(2小时) CNHOUR6(6小时) CNHOUR12(12小时) 
-                      CNHOUR24(1天) CNDAY7(1周) CNDAY30(1月)
+        - limit: 返回数量限制，默认20
     """
     try:
-        # 获取时间周期参数
-        time_period = request.args.get('time_period', 'CNHOUR12')
+        # 获取数量限制参数
+        limit = int(request.args.get('limit', 20))
         
-        current_app.logger.info(f"获取微博舆情热门股票: time_period={time_period}")
+        current_app.logger.info(f"获取风险警示板股票: limit={limit}")
         
-        # 验证时间周期参数
-        valid_periods = ['CNHOUR2', 'CNHOUR6', 'CNHOUR12', 'CNHOUR24', 'CNDAY7', 'CNDAY30']
-        if time_period not in valid_periods:
-            return utils.error(message=f'无效的时间周期，支持的值: {", ".join(valid_periods)}', code=400)
-        
-        # 获取微博舆情报告中的热门股票
+        # 获取风险警示板数据
         try:
-            hot_stocks_df = ak.stock_js_weibo_report(time_period=time_period)
+            risk_stocks_df = ak.stock_zh_a_st_em()
             
-            if hot_stocks_df.empty:
-                current_app.logger.warning("微博舆情接口返回空数据")
-                return utils.success(data=[], message='暂无热门股票数据')
+            if risk_stocks_df.empty:
+                current_app.logger.warning("风险警示板接口返回空数据")
+                return utils.success(data=[], message='暂无风险警示板数据')
             
-            # 转换为字典列表
-            hot_stocks_list = hot_stocks_df.to_dict('records')
+            current_app.logger.info(f"获取到风险警示板原始数据，共 {len(risk_stocks_df)} 条记录")
             
-            # 处理数据格式，确保rate字段为数值类型
+            # 转换为字典列表并限制数量
+            risk_stocks_list = risk_stocks_df.head(limit).to_dict('records')
+            
+            # 处理数据格式
             processed_stocks = []
-            for stock in hot_stocks_list:
+            for stock in risk_stocks_list:
                 try:
-                    rate_value = float(stock.get('rate', 0))
                     processed_stocks.append({
-                        'name': stock.get('name', ''),
-                        'rate': rate_value,
-                        'rate_display': f"{rate_value:+.2f}%" if rate_value != 0 else "0.00%"
+                        'rank': int(stock.get('序号', 0)),
+                        'code': str(stock.get('代码', '')),
+                        'name': str(stock.get('名称', '')),
+                        'price': float(stock.get('最新价', 0)),
+                        'change_percent': float(stock.get('涨跌幅', 0)),
+                        'change_amount': float(stock.get('涨跌额', 0)),
+                        'volume': float(stock.get('成交量', 0)),
+                        'turnover': float(stock.get('成交额', 0)),
+                        'amplitude': float(stock.get('振幅', 0)),
+                        'high': float(stock.get('最高', 0)),
+                        'low': float(stock.get('最低', 0)),
+                        'open': float(stock.get('今开', 0)),
+                        'close_yesterday': float(stock.get('昨收', 0)),
+                        'volume_ratio': float(stock.get('量比', 0)),
+                        'turnover_rate': float(stock.get('换手率', 0)),
+                        'pe_dynamic': float(stock.get('市盈率-动态', 0)) if stock.get('市盈率-动态') != '-' else 0,
+                        'pb': float(stock.get('市净率', 0)) if stock.get('市净率') != '-' else 0
                     })
-                except (ValueError, TypeError):
-                    # 如果转换失败，跳过这条记录
-                    current_app.logger.warning(f"无法解析股票 {stock.get('name', 'unknown')} 的rate值: {stock.get('rate', 'N/A')}")
+                except (ValueError, TypeError) as parse_error:
+                    current_app.logger.warning(f"无法解析股票 {stock.get('名称', 'unknown')} 的数据: {str(parse_error)}")
                     continue
             
-            current_app.logger.info(f"成功获取 {len(processed_stocks)} 只热门股票")
+            current_app.logger.info(f"成功处理 {len(processed_stocks)} 只风险警示板股票")
             
             return utils.success(
                 data={
                     'stocks': processed_stocks,
-                    'time_period': time_period,
+                    'total_count': len(risk_stocks_df),
+                    'returned_count': len(processed_stocks),
                     'update_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                 },
-                message='获取热门股票成功'
+                message='获取风险警示板数据成功'
             )
             
         except Exception as api_error:
-            current_app.logger.error(f"调用akshare微博舆情接口失败: {str(api_error)}")
+            current_app.logger.error(f"调用akshare风险警示板接口失败: {str(api_error)}")
             current_app.logger.error(traceback.format_exc())
             
             # 返回备用数据
             fallback_data = [
-                {'name': '中国平安', 'rate': 8.5, 'rate_display': '+8.50%'},
-                {'name': '招商银行', 'rate': 7.2, 'rate_display': '+7.20%'},
-                {'name': '贵州茅台', 'rate': 6.8, 'rate_display': '+6.80%'},
-                {'name': '比亚迪', 'rate': 6.3, 'rate_display': '+6.30%'},
-                {'name': '宁德时代', 'rate': 5.9, 'rate_display': '+5.90%'},
-                {'name': '五粮液', 'rate': 5.1, 'rate_display': '+5.10%'},
-                {'name': '美的集团', 'rate': 4.7, 'rate_display': '+4.70%'},
-                {'name': '腾讯控股', 'rate': 4.2, 'rate_display': '+4.20%'},
-                {'name': '阿里巴巴', 'rate': 3.8, 'rate_display': '+3.80%'},
-                {'name': '工商银行', 'rate': 3.5, 'rate_display': '+3.50%'}
+                {
+                    'rank': 1,
+                    'code': '300313',
+                    'name': '*ST天山',
+                    'price': 7.61,
+                    'change_percent': 10.45,
+                    'change_amount': 0.72,
+                    'volume': 245680000,
+                    'turnover': 1863450000,
+                    'amplitude': 11.96,
+                    'high': 7.61,
+                    'low': 6.89,
+                    'open': 6.89,
+                    'close_yesterday': 6.89,
+                    'volume_ratio': 7.84,
+                    'turnover_rate': 11.96,
+                    'pe_dynamic': -90.65,
+                    'pb': 33.49
+                },
+                {
+                    'rank': 2,
+                    'code': '300167',
+                    'name': 'ST迪威迅',
+                    'price': 3.19,
+                    'change_percent': 7.41,
+                    'change_amount': 0.22,
+                    'volume': 123450000,
+                    'turnover': 393850000,
+                    'amplitude': 9.31,
+                    'high': 3.19,
+                    'low': 2.97,
+                    'open': 2.97,
+                    'close_yesterday': 2.97,
+                    'volume_ratio': 3.86,
+                    'turnover_rate': 9.31,
+                    'pe_dynamic': -5.82,
+                    'pb': 54.39
+                },
+                {
+                    'rank': 3,
+                    'code': '002569',
+                    'name': 'ST步森',
+                    'price': 6.90,
+                    'change_percent': 5.02,
+                    'change_amount': 0.33,
+                    'volume': 87650000,
+                    'turnover': 604550000,
+                    'amplitude': 0.93,
+                    'high': 6.90,
+                    'low': 6.57,
+                    'open': 6.57,
+                    'close_yesterday': 6.57,
+                    'volume_ratio': 0.88,
+                    'turnover_rate': 0.93,
+                    'pe_dynamic': -27.27,
+                    'pb': 7.05
+                },
+                {
+                    'rank': 4,
+                    'code': '000996',
+                    'name': '*ST中期',
+                    'price': 5.24,
+                    'change_percent': 5.01,
+                    'change_amount': 0.25,
+                    'volume': 65430000,
+                    'turnover': 342800000,
+                    'amplitude': 4.47,
+                    'high': 5.24,
+                    'low': 4.99,
+                    'open': 4.99,
+                    'close_yesterday': 4.99,
+                    'volume_ratio': 0.81,
+                    'turnover_rate': 4.47,
+                    'pe_dynamic': 6823.87,
+                    'pb': 3.73
+                },
+                {
+                    'rank': 5,
+                    'code': '600589',
+                    'name': '*ST榕泰',
+                    'price': 5.48,
+                    'change_percent': 4.98,
+                    'change_amount': 0.26,
+                    'volume': 98760000,
+                    'turnover': 540920000,
+                    'amplitude': 4.07,
+                    'high': 5.48,
+                    'low': 5.22,
+                    'open': 5.22,
+                    'close_yesterday': 5.22,
+                    'volume_ratio': 1.71,
+                    'turnover_rate': 4.07,
+                    'pe_dynamic': -24.53,
+                    'pb': -5.13
+                }
             ]
             
-            current_app.logger.info("使用备用热门股票数据")
+            current_app.logger.info("使用备用风险警示板数据")
             
             return utils.success(
                 data={
                     'stocks': fallback_data,
-                    'time_period': time_period,
+                    'total_count': len(fallback_data),
+                    'returned_count': len(fallback_data),
                     'update_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                     'fallback': True
                 },
-                message='获取热门股票成功（备用数据）'
+                message='获取风险警示板数据成功（备用数据）'
             )
             
     except Exception as e:
-        current_app.logger.error(f"获取热门股票失败: {str(e)}")
+        current_app.logger.error(f"获取风险警示板数据失败: {str(e)}")
         current_app.logger.error(traceback.format_exc())
-        return utils.error(message=f'获取热门股票失败: {str(e)}', code=500) 
+        return utils.error(message=f'获取风险警示板数据失败: {str(e)}', code=500)
+
+@stock_controller.route('/industry-boards', methods=['GET'])
+def get_industry_boards():
+    """
+    获取东方财富行业板块数据
+    """
+    try:
+        current_app.logger.info("开始获取东方财富行业板块数据")
+        
+        # 获取行业板块数据
+        df = ak.stock_board_industry_name_em()
+        
+        if df.empty:
+            current_app.logger.warning("东方财富接口返回空数据")
+            # 返回备用数据
+            fallback_data = [
+                {'rank': 1, 'name': '电子信息', 'change_percent': 3.45, 'market_value': 2850000000000},
+                {'rank': 2, 'name': '生物医药', 'change_percent': 2.78, 'market_value': 1920000000000},
+                {'rank': 3, 'name': '新能源', 'change_percent': 2.34, 'market_value': 1750000000000},
+                {'rank': 4, 'name': '人工智能', 'change_percent': 1.89, 'market_value': 1450000000000},
+                {'rank': 5, 'name': '半导体', 'change_percent': 1.67, 'market_value': 1320000000000},
+                {'rank': 6, 'name': '新材料', 'change_percent': 1.23, 'market_value': 980000000000},
+                {'rank': 7, 'name': '节能环保', 'change_percent': 0.98, 'market_value': 850000000000},
+                {'rank': 8, 'name': '高端装备', 'change_percent': 0.76, 'market_value': 720000000000},
+                {'rank': 9, 'name': '数字创意', 'change_percent': 0.45, 'market_value': 650000000000},
+                {'rank': 10, 'name': '现代服务', 'change_percent': 0.23, 'market_value': 580000000000}
+            ]
+            
+            return utils.success(data={
+                'industries': fallback_data,
+                'total_count': len(fallback_data),
+                'update_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                'is_fallback': True,
+                'fallback_reason': '东方财富接口返回空数据'
+            })
+        
+        # 转换为字典列表
+        industry_data = []
+        for index, row in df.iterrows():
+            try:
+                industry_data.append({
+                    'rank': int(row['排名']) if pd.notna(row['排名']) else 0,
+                    'name': str(row['板块名称']) if pd.notna(row['板块名称']) else '',
+                    'code': str(row['板块代码']) if pd.notna(row['板块代码']) else '',
+                    'price': float(row['最新价']) if pd.notna(row['最新价']) else 0.0,
+                    'change_amount': float(row['涨跌额']) if pd.notna(row['涨跌额']) else 0.0,
+                    'change_percent': float(row['涨跌幅']) if pd.notna(row['涨跌幅']) else 0.0,
+                    'market_value': int(row['总市值']) if pd.notna(row['总市值']) else 0,
+                    'turnover_rate': float(row['换手率']) if pd.notna(row['换手率']) else 0.0,
+                    'rising_count': int(row['上涨家数']) if pd.notna(row['上涨家数']) else 0,
+                    'falling_count': int(row['下跌家数']) if pd.notna(row['下跌家数']) else 0,
+                    'leading_stock': str(row['领涨股票']) if pd.notna(row['领涨股票']) else '',
+                    'leading_stock_change': float(row['领涨股票-涨跌幅']) if pd.notna(row['领涨股票-涨跌幅']) else 0.0
+                })
+            except Exception as row_error:
+                current_app.logger.warning(f"处理行业数据行失败: {str(row_error)}")
+                continue
+        
+        if not industry_data:
+            current_app.logger.warning("处理后的行业数据为空")
+            # 返回备用数据
+            fallback_data = [
+                {'rank': 1, 'name': '电子信息', 'change_percent': 3.45, 'market_value': 2850000000000},
+                {'rank': 2, 'name': '生物医药', 'change_percent': 2.78, 'market_value': 1920000000000},
+                {'rank': 3, 'name': '新能源', 'change_percent': 2.34, 'market_value': 1750000000000},
+                {'rank': 4, 'name': '人工智能', 'change_percent': 1.89, 'market_value': 1450000000000},
+                {'rank': 5, 'name': '半导体', 'change_percent': 1.67, 'market_value': 1320000000000}
+            ]
+            
+            return utils.success(data={
+                'industries': fallback_data,
+                'total_count': len(fallback_data),
+                'update_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                'is_fallback': True,
+                'fallback_reason': '数据处理失败'
+            })
+        
+        # 只返回前15个行业（用于饼图显示）
+        top_industries = industry_data[:15]
+        
+        current_app.logger.info(f"成功获取并处理 {len(top_industries)} 个行业数据")
+        
+        return utils.success(data={
+            'industries': top_industries,
+            'total_count': len(industry_data),
+            'update_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'is_fallback': False
+        })
+        
+    except ImportError:
+        current_app.logger.error("akshare模块未安装")
+        fallback_data = [
+            {'rank': 1, 'name': '电子信息', 'change_percent': 3.45, 'market_value': 2850000000000},
+            {'rank': 2, 'name': '生物医药', 'change_percent': 2.78, 'market_value': 1920000000000},
+            {'rank': 3, 'name': '新能源', 'change_percent': 2.34, 'market_value': 1750000000000}
+        ]
+        return utils.success(data={
+            'industries': fallback_data,
+            'total_count': len(fallback_data),
+            'update_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'is_fallback': True,
+            'fallback_reason': 'akshare模块未安装'
+        })
+    except Exception as e:
+        error_msg = str(e)
+        current_app.logger.error(f"获取行业板块数据失败: {error_msg}")
+        current_app.logger.error(traceback.format_exc())
+        
+        # 返回备用数据而不是错误
+        fallback_data = [
+            {'rank': 1, 'name': '电子信息', 'change_percent': 3.45, 'market_value': 2850000000000},
+            {'rank': 2, 'name': '生物医药', 'change_percent': 2.78, 'market_value': 1920000000000},
+            {'rank': 3, 'name': '新能源', 'change_percent': 2.34, 'market_value': 1750000000000},
+            {'rank': 4, 'name': '人工智能', 'change_percent': 1.89, 'market_value': 1450000000000},
+            {'rank': 5, 'name': '半导体', 'change_percent': 1.67, 'market_value': 1320000000000}
+        ]
+        
+        return utils.success(data={
+            'industries': fallback_data,
+            'total_count': len(fallback_data),
+            'update_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'is_fallback': True,
+            'fallback_reason': f'API调用失败: {error_msg}'
+        }) 

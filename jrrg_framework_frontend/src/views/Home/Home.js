@@ -26,8 +26,8 @@ import {
   ArrowUpOutlined,
   ArrowDownOutlined,
   LineChartOutlined,
-  FireOutlined,
-  RobotOutlined,
+  ExclamationCircleOutlined,
+  PieChartOutlined,
   BarChartOutlined,
   BulbOutlined,
   InfoCircleOutlined,
@@ -40,7 +40,7 @@ import ReactECharts from 'echarts-for-react';
 import './Home.css';
 import { useNavigate } from 'react-router-dom';
 import { getMarketNews } from '../../api/news'; // 导入获取市场资讯的API
-import { getMarketIndexes, getMarketTrend, getHotStocks } from '../../api/stock'; // 导入获取指数和走势的API
+import { getMarketIndexes, getMarketTrend, getRiskWarningStocks, getIndustryBoards } from '../../api/stock'; // 导入获取指数和风险警示板的API
 
 const { Title, Text, Paragraph, Link } = Typography;
 
@@ -62,12 +62,13 @@ const Home = () => {
   const [currentIndex, setCurrentIndex] = useState('000001'); // 当前选择的指数
   const [trendPeriod, setTrendPeriod] = useState('1y'); // 当前选择的时间间隔
   const [showCombined, setShowCombined] = useState(false); // 是否显示组合视图
-  const [hotStocks, setHotStocks] = useState([]);
-  const [recommendedStocks, setRecommendedStocks] = useState([]);
+  const [riskWarningStocks, setRiskWarningStocks] = useState([]);
   const [newsData, setNewsData] = useState([]);  // 新添加的新闻数据状态
   const [newsLoading, setNewsLoading] = useState(true);  // 新闻加载状态
-  const [hotStocksLoading, setHotStocksLoading] = useState(false); // 热门股票加载状态
+  const [riskWarningLoading, setRiskWarningLoading] = useState(false); // 风险警示股票加载状态
   const [isHeatmapFullscreen, setIsHeatmapFullscreen] = useState(false); // 热力图全屏状态
+  const [industryData, setIndustryData] = useState([]); // 行业板块数据
+  const [industryLoading, setIndustryLoading] = useState(false); // 行业数据加载状态
   const navigate = useNavigate();
 
   // 获取市场新闻数据
@@ -198,9 +199,9 @@ const Home = () => {
 
   // 处理显示模式切换
   const toggleDisplayMode = () => {
-    const newMode = !showCombined;
-    setShowCombined(newMode);
-    if (newMode && (!combinedTrendData.shanghai || !combinedTrendData.shenzhen || !combinedTrendData.chuangye)) {
+    setShowCombined(!showCombined);
+    if (!showCombined) {
+      // 切换到组合视图时，获取所有三个指数的数据
       fetchCombinedTrendData(trendPeriod);
     }
   };
@@ -208,114 +209,343 @@ const Home = () => {
   // 处理指数切换
   const handleIndexChange = (indexCode) => {
     setCurrentIndex(indexCode);
-    if (showCombined) {
-      fetchCombinedTrendData(trendPeriod);
-    } else {
+    if (!showCombined) {
       fetchMarketTrend(indexCode, trendPeriod);
     }
   };
 
-  // 处理时间间隔切换
+  // 处理时间区间切换
   const handlePeriodChange = (e) => {
-    const period = e.target.value;
-    setTrendPeriod(period);
+    const newPeriod = e.target.value;
+    setTrendPeriod(newPeriod);
     if (showCombined) {
-      fetchCombinedTrendData(period);
+      fetchCombinedTrendData(newPeriod);
     } else {
-      fetchMarketTrend(currentIndex, period);
+      fetchMarketTrend(currentIndex, newPeriod);
     }
   };
 
-  // 刷新指数数据
+  // 手动刷新指数数据
   const handleRefreshIndexes = () => {
     setLoading(true);
-    fetchMarketIndexes().finally(() => {
-      setLoading(false);
-      message.success('指数数据已更新');
-    });
+    fetchMarketIndexes().finally(() => setLoading(false));
   };
 
-  // 获取热门股票数据
-  const fetchHotStocks = async (timePeriod = 'CNHOUR12') => {
+  const fetchRiskWarningStocks = async (limit = 15) => {
     try {
-      setHotStocksLoading(true);
-      console.log(`开始获取热门股票数据: timePeriod=${timePeriod}`);
-      const response = await getHotStocks(timePeriod);
+      setRiskWarningLoading(true);
+      console.log(`开始获取风险警示板数据: limit=${limit}`);
+      const response = await getRiskWarningStocks(limit);
       
       if (response && response.code === 0 && response.data) {
         const stocksData = response.data.stocks || [];
-        console.log(`成功获取${stocksData.length}只热门股票`);
+        console.log(`成功获取${stocksData.length}只风险警示股票`);
         
         // 转换数据格式以适配表格
         const formattedStocks = stocksData.map((stock, index) => ({
           key: index,
+          rank: stock.rank,
+          code: stock.code,
           name: stock.name,
-          rate: stock.rate,
-          rate_display: stock.rate_display
+          price: stock.price,
+          change_percent: stock.change_percent,
+          change_amount: stock.change_amount,
+          volume: stock.volume,
+          turnover: stock.turnover,
+          amplitude: stock.amplitude,
+          pe_dynamic: stock.pe_dynamic,
+          pb: stock.pb
         }));
         
-        setHotStocks(formattedStocks);
+        setRiskWarningStocks(formattedStocks);
         
         if (response.data.fallback) {
-          message.info('使用备用热门股票数据');
+          message.info('使用备用风险警示数据');
         } else {
-          message.success(`成功更新${stocksData.length}只热门股票`);
+          message.success(`成功更新${stocksData.length}只风险警示股票`);
         }
       } else {
-        console.error('获取热门股票数据失败:', response ? response.message : '未知错误');
+        console.error('获取风险警示数据失败:', response ? response.message : '未知错误');
         // 使用备用数据
-        setHotStocks([
-          { key: 0, name: '贵州茅台', rate: 8.5, rate_display: '+8.50%' },
-          { key: 1, name: '五粮液', rate: 7.2, rate_display: '+7.20%' },
-          { key: 2, name: '中国平安', rate: 6.8, rate_display: '+6.80%' },
-          { key: 3, name: '宁德时代', rate: 6.3, rate_display: '+6.30%' },
-          { key: 4, name: '紫金矿业', rate: 5.9, rate_display: '+5.90%' }
+        setRiskWarningStocks([
+          { key: 0, rank: 1, code: '300313', name: '*ST天山', price: 7.61, change_percent: 10.45, change_amount: 0.72, volume: 245680000, turnover: 1863450000, amplitude: 11.96, pe_dynamic: -90.65, pb: 33.49 },
+          { key: 1, rank: 2, code: '300167', name: 'ST迪威迅', price: 3.19, change_percent: 7.41, change_amount: 0.22, volume: 123450000, turnover: 393850000, amplitude: 9.31, pe_dynamic: -5.82, pb: 54.39 },
+          { key: 2, rank: 3, code: '002569', name: 'ST步森', price: 6.90, change_percent: 5.02, change_amount: 0.33, volume: 87650000, turnover: 604550000, amplitude: 0.93, pe_dynamic: -27.27, pb: 7.05 },
+          { key: 3, rank: 4, code: '000996', name: '*ST中期', price: 5.24, change_percent: 5.01, change_amount: 0.25, volume: 65430000, turnover: 342800000, amplitude: 4.47, pe_dynamic: 6823.87, pb: 3.73 },
+          { key: 4, rank: 5, code: '600589', name: '*ST榕泰', price: 5.48, change_percent: 4.98, change_amount: 0.26, volume: 98760000, turnover: 540920000, amplitude: 4.07, pe_dynamic: -24.53, pb: -5.13 }
         ]);
-        message.error('获取热门股票失败，使用备用数据');
+        message.error('获取风险警示数据失败，使用备用数据');
       }
     } catch (error) {
-      console.error('获取热门股票数据出错:', error);
+      console.error('获取风险警示数据出错:', error);
       // 使用备用数据
-      setHotStocks([
-        { key: 0, name: '贵州茅台', rate: 8.5, rate_display: '+8.50%' },
-        { key: 1, name: '五粮液', rate: 7.2, rate_display: '+7.20%' },
-        { key: 2, name: '中国平安', rate: 6.8, rate_display: '+6.80%' },
-        { key: 3, name: '宁德时代', rate: 6.3, rate_display: '+6.30%' },
-        { key: 4, name: '紫金矿业', rate: 5.9, rate_display: '+5.90%' }
+      setRiskWarningStocks([
+        { key: 0, rank: 1, code: '300313', name: '*ST天山', price: 7.61, change_percent: 10.45, change_amount: 0.72, volume: 245680000, turnover: 1863450000, amplitude: 11.96, pe_dynamic: -90.65, pb: 33.49 },
+        { key: 1, rank: 2, code: '300167', name: 'ST迪威迅', price: 3.19, change_percent: 7.41, change_amount: 0.22, volume: 123450000, turnover: 393850000, amplitude: 9.31, pe_dynamic: -5.82, pb: 54.39 },
+        { key: 2, rank: 3, code: '002569', name: 'ST步森', price: 6.90, change_percent: 5.02, change_amount: 0.33, volume: 87650000, turnover: 604550000, amplitude: 0.93, pe_dynamic: -27.27, pb: 7.05 },
+        { key: 3, rank: 4, code: '000996', name: '*ST中期', price: 5.24, change_percent: 5.01, change_amount: 0.25, volume: 65430000, turnover: 342800000, amplitude: 4.47, pe_dynamic: 6823.87, pb: 3.73 },
+        { key: 4, rank: 5, code: '600589', name: '*ST榕泰', price: 5.48, change_percent: 4.98, change_amount: 0.26, volume: 98760000, turnover: 540920000, amplitude: 4.07, pe_dynamic: -24.53, pb: -5.13 }
       ]);
-      message.error('获取热门股票失败，使用备用数据');
+      message.error('获取风险警示数据失败，使用备用数据');
     } finally {
-      setHotStocksLoading(false);
+      setRiskWarningLoading(false);
     }
+  };
+
+  // 获取行业板块数据
+  const fetchIndustryBoards = async () => {
+    try {
+      setIndustryLoading(true);
+      const response = await getIndustryBoards();
+      
+      if (response && response.code === 0) {
+        console.log('获取到行业板块数据:', response.data);
+        setIndustryData(response.data.industries || []);
+        
+        // 根据是否为备用数据显示不同的提示
+        if (response.data.is_fallback) {
+          message.warning(`数据获取异常，已显示示例数据 (${response.data.fallback_reason || '未知原因'})`);
+        } else {
+          message.success('行业数据更新成功');
+        }
+      } else {
+        console.error('获取行业板块数据失败:', response ? response.message : '未知错误');
+        // 使用更丰富的备用数据
+        const fallbackData = [
+          { name: '电子信息', change_percent: 3.45, market_value: 2850000000000, rank: 1 },
+          { name: '生物医药', change_percent: 2.78, market_value: 1920000000000, rank: 2 },
+          { name: '新能源', change_percent: 2.34, market_value: 1750000000000, rank: 3 },
+          { name: '人工智能', change_percent: 1.89, market_value: 1450000000000, rank: 4 },
+          { name: '半导体', change_percent: 1.67, market_value: 1320000000000, rank: 5 },
+          { name: '新材料', change_percent: 1.23, market_value: 980000000000, rank: 6 },
+          { name: '节能环保', change_percent: 0.98, market_value: 850000000000, rank: 7 },
+          { name: '高端装备', change_percent: 0.76, market_value: 720000000000, rank: 8 },
+          { name: '数字创意', change_percent: 0.45, market_value: 650000000000, rank: 9 },
+          { name: '现代服务', change_percent: 0.23, market_value: 580000000000, rank: 10 }
+        ];
+        setIndustryData(fallbackData);
+        message.warning('获取行业数据失败，已切换至示例数据');
+      }
+    } catch (error) {
+      console.error('获取行业板块数据出错:', error);
+      // 使用更丰富的备用数据
+      const fallbackData = [
+        { name: '电子信息', change_percent: 3.45, market_value: 2850000000000, rank: 1 },
+        { name: '生物医药', change_percent: 2.78, market_value: 1920000000000, rank: 2 },
+        { name: '新能源', change_percent: 2.34, market_value: 1750000000000, rank: 3 },
+        { name: '人工智能', change_percent: 1.89, market_value: 1450000000000, rank: 4 },
+        { name: '半导体', change_percent: 1.67, market_value: 1320000000000, rank: 5 },
+        { name: '新材料', change_percent: 1.23, market_value: 980000000000, rank: 6 },
+        { name: '节能环保', change_percent: 0.98, market_value: 850000000000, rank: 7 },
+        { name: '高端装备', change_percent: 0.76, market_value: 720000000000, rank: 8 },
+        { name: '数字创意', change_percent: 0.45, market_value: 650000000000, rank: 9 },
+        { name: '现代服务', change_percent: 0.23, market_value: 580000000000, rank: 10 }
+      ];
+      setIndustryData(fallbackData);
+      
+      // 根据错误类型显示不同的提示
+      if (error.message && error.message.includes('网络')) {
+        message.error('网络连接失败，已显示示例数据');
+      } else if (error.message && error.message.includes('timeout')) {
+        message.error('请求超时，已显示示例数据');
+      } else {
+        message.warning('数据获取异常，已显示示例数据');
+      }
+    } finally {
+      setIndustryLoading(false);
+    }
+  };
+
+  // 获取行业分析饼图配置
+  const getIndustryPieChartOption = () => {
+    if (!industryData || industryData.length === 0) {
+      return {
+        title: {
+          text: '暂无数据',
+          left: 'center',
+          top: 'middle'
+        },
+        series: []
+      };
+    }
+
+    // 定义丰富的颜色数组
+    const colorPalette = [
+      '#ff6b6b', '#4ecdc4', '#45b7d1', '#f9ca24', '#f0932b',
+      '#eb4d4b', '#6c5ce7', '#a29bfe', '#fd79a8', '#fdcb6e',
+      '#e17055', '#00b894', '#00cec9', '#0984e3', '#6c5ce7',
+      '#a29bfe', '#fd79a8', '#fdcb6e', '#e17055', '#00b894',
+      '#74b9ff', '#81ecec', '#fab1a0', '#ff7675', '#fd79a8'
+    ];
+
+    // 准备饼图数据，按市值排序取前10个
+    const pieData = industryData
+      .sort((a, b) => b.market_value - a.market_value)
+      .slice(0, 10)
+      .map((item, index) => {
+        // 根据涨跌幅调整颜色透明度
+        const baseColor = colorPalette[index % colorPalette.length];
+        let opacity = 0.8;
+        
+        // 涨幅越大，透明度越高（更鲜艳）
+        if (item.change_percent > 3) {
+          opacity = 1.0;
+        } else if (item.change_percent > 1) {
+          opacity = 0.9;
+        } else if (item.change_percent > 0) {
+          opacity = 0.8;
+        } else if (item.change_percent > -1) {
+          opacity = 0.7;
+        } else {
+          opacity = 0.6;
+        }
+
+        return {
+          name: item.name,
+          value: item.market_value,
+          changePercent: item.change_percent,
+          itemStyle: {
+            color: baseColor,
+            opacity: opacity,
+            borderColor: '#fff',
+            borderWidth: 1
+          },
+          emphasis: {
+            itemStyle: {
+              shadowBlur: 10,
+              shadowOffsetX: 0,
+              shadowColor: baseColor + '80',
+              borderWidth: 2,
+              opacity: 1.0
+            }
+          }
+        };
+      });
+
+    return {
+      title: {
+        text: '行业市值分布',
+        subtext: 'TOP 10',
+        left: 'center',
+        top: 15,
+        textStyle: {
+          fontSize: 14,
+          fontWeight: 'bold',
+          color: '#2c3e50'
+        },
+        subtextStyle: {
+          fontSize: 12,
+          color: '#7f8c8d'
+        }
+      },
+      tooltip: {
+        trigger: 'item',
+        backgroundColor: 'rgba(50,50,50,0.9)',
+        borderColor: '#ddd',
+        borderWidth: 1,
+        textStyle: {
+          color: '#fff',
+          fontSize: 12
+        },
+        formatter: function(params) {
+          const value = params.value;
+          const changePercent = params.data.changePercent;
+          const trendIcon = changePercent >= 0 ? '📈' : '📉';
+          const marketValueYi = (value / 100000000).toFixed(0);
+          
+          return `<div style="padding: 6px;">
+                    <div style="font-weight: bold; margin-bottom: 4px; color: #fff;">
+                      ${trendIcon} ${params.name}
+                    </div>
+                    <div>市值: <span style="color: #74b9ff; font-weight: bold;">${marketValueYi}亿元</span></div>
+                    <div>涨跌幅: <span style="color: ${changePercent >= 0 ? '#52c41a' : '#ff4d4f'}; font-weight: bold;">${changePercent >= 0 ? '+' : ''}${changePercent.toFixed(2)}%</span></div>
+                    <div>占比: <span style="color: #ffa940; font-weight: bold;">${params.percent.toFixed(1)}%</span></div>
+                  </div>`;
+        }
+      },
+      legend: {
+        orient: 'vertical',
+        left: 10,
+        top: 80,
+        bottom: 20,
+        width: 120,
+        textStyle: {
+          fontSize: 10,
+          color: '#2c3e50'
+        },
+        formatter: function(name) {
+          const item = industryData.find(d => d.name === name);
+          const changePercent = item ? item.change_percent : 0;
+          const trendIcon = changePercent >= 0 ? '↗' : '↘';
+          const shortName = name.length > 4 ? name.substring(0, 4) : name;
+          return `${shortName} ${trendIcon}${changePercent >= 0 ? '+' : ''}${changePercent.toFixed(2)}%`;
+        },
+        itemWidth: 10,
+        itemHeight: 10,
+        itemGap: 6,
+        icon: 'circle'
+      },
+      series: [
+        {
+          name: '行业市值',
+          type: 'pie',
+          radius: ['40%', '70%'],
+          center: ['65%', '55%'],
+          avoidLabelOverlap: true,
+          data: pieData,
+          animationType: 'scale',
+          animationEasing: 'elasticOut',
+          animationDelay: function (idx) {
+            return idx * 100;
+          },
+          label: {
+            show: true,
+            position: 'outside',
+            fontSize: 10,
+            fontWeight: 'bold',
+            color: '#2c3e50',
+            formatter: function(params) {
+              if (params.percent < 3) return ''; // 小于3%不显示标签，避免重叠
+              const shortName = params.name.length > 3 ? params.name.substring(0, 3) : params.name;
+              return `${shortName}\n${params.percent.toFixed(1)}%`;
+            },
+            distanceToLabelLine: 5
+          },
+          labelLine: {
+            show: true,
+            length: 8,
+            length2: 5,
+            smooth: false,
+            lineStyle: {
+              width: 1
+            }
+          },
+          emphasis: {
+            scale: true,
+            scaleSize: 5
+          }
+        }
+      ]
+    };
   };
 
   // 模拟加载数据
   useEffect(() => {
-    // 获取三大指数实时数据
+    // 页面加载时获取所有数据
     fetchMarketIndexes();
+    fetchNewsData();
+    fetchRiskWarningStocks();  
+    fetchIndustryBoards(); // 添加获取行业板块数据
     
-    // 获取市场走势数据
-    fetchMarketTrend('000001', '1y');
-    
-    // 获取组合走势数据（预加载）
-    fetchCombinedTrendData('1y');
-    
-    // 获取热门股票数据
-    fetchHotStocks();
-    
-    setTimeout(() => {
-      // 模拟推荐股票数据
-      setRecommendedStocks([
-        { code: '600036', name: '招商银行', reason: '业绩超预期，分红率提升', change: 1.23 },
-        { code: '000333', name: '美的集团', reason: '行业龙头，估值合理', change: 2.45 },
-        { code: '601888', name: '中国中免', reason: '免税政策利好，出境游复苏', change: -0.67 }
-      ]);
+    // 获取默认的走势数据
+    fetchMarketTrend();
+    fetchCombinedTrendData();
 
+    // 模拟加载数据
+    setLoading(true);
+    setTimeout(() => {
       setLoading(false);
     }, 1000);
-
-    // 加载市场新闻数据
-    fetchNewsData();
   }, []);
 
   // 跳转到指数行情页面
@@ -676,18 +906,52 @@ const Home = () => {
   // 表格列定义
   const stockColumns = [
     {
-      title: '股票名称',
-      dataIndex: 'name',
-      key: 'name',
-      render: (text) => <Text strong>{text}</Text>
+      title: '排名',
+      dataIndex: 'rank',
+      key: 'rank',
+      width: 60,
+      render: (rank) => <Text strong style={{ color: '#1890ff' }}>{rank}</Text>
     },
     {
-      title: '人气指数',
-      dataIndex: 'rate',
-      key: 'rate',
-      render: (rate, record) => (
-        <Tag color={rate > 0 ? 'red' : rate < 0 ? 'green' : 'default'}>
-          {record.rate_display || `${rate.toFixed(2)}%`}
+      title: '代码',
+      dataIndex: 'code',
+      key: 'code',
+      width: 80,
+      render: (code) => <Text type="secondary" style={{ fontSize: '12px' }}>{code}</Text>
+    },
+    {
+      title: '名称',
+      dataIndex: 'name',
+      key: 'name',
+      width: 100,
+      render: (text) => (
+        <Text strong style={{ 
+          color: text.includes('ST') ? '#ff4d4f' : '#1890ff',
+          fontSize: '13px'
+        }}>
+          {text}
+        </Text>
+      )
+    },
+    {
+      title: '最新价',
+      dataIndex: 'price',
+      key: 'price',
+      width: 70,
+      render: (price) => (
+        <Text style={{ fontSize: '12px', fontWeight: 'bold' }}>
+          {price ? price.toFixed(2) : '-'}
+        </Text>
+      )
+    },
+    {
+      title: '涨跌幅',
+      dataIndex: 'change_percent',
+      key: 'change_percent',
+      width: 80,
+      render: (changePercent) => (
+        <Tag color={changePercent > 0 ? 'red' : changePercent < 0 ? 'green' : 'default'} size="small">
+          {changePercent ? `${changePercent > 0 ? '+' : ''}${changePercent.toFixed(2)}%` : '-'}
         </Tag>
       )
     }
@@ -932,7 +1196,7 @@ const Home = () => {
         </Col>
       </Row>
 
-      {/* 市场资讯、热门股票和AI推荐 */}
+      {/* 市场资讯、热门股票和行业分析 */}
       <Row gutter={[16, 16]} style={{ marginTop: 24 }}>
         <Col xs={24} lg={8}>
           <Card
@@ -971,15 +1235,10 @@ const Home = () => {
                   <List.Item
                     key={news.title + (news.publish_time || '')}
                     actions={[
-                      <Space key="source-info">
-                        <Text type="secondary" style={{ fontSize: '12px' }}>
-                          {news.source || '财新网'}
-                        </Text>
-                        {news.interval_time && (
-                          <Text type="secondary" style={{ fontSize: '12px' }}>
-                            {news.interval_time}
-                          </Text>
-                        )}
+                      <Space size="small" key="meta">
+                        <Tag color="blue" style={{ fontSize: '11px', margin: 0 }}>
+                          {news.source || '东方财富'}
+                        </Tag>
                         {news.publish_time && (
                           <Text type="secondary" style={{ fontSize: '12px' }}>
                             {news.publish_time}
@@ -1038,15 +1297,15 @@ const Home = () => {
           <Card 
             title={
               <div className="card-title-with-icon">
-                <FireOutlined /> 热门股票 <Text type="secondary" style={{fontSize: '12px'}}>(微博舆情)</Text>
+                <ExclamationCircleOutlined /> 风险警示 <Text type="secondary" style={{fontSize: '12px'}}>(东方财富)</Text>
               </div>
             }
             extra={
               <Button 
                 type="link" 
-                icon={<ReloadOutlined spin={hotStocksLoading} />}
-                onClick={() => fetchHotStocks()}
-                disabled={hotStocksLoading}
+                icon={<ReloadOutlined spin={riskWarningLoading} />}
+                onClick={() => fetchRiskWarningStocks()}
+                disabled={riskWarningLoading}
               >
                 刷新
               </Button>
@@ -1054,15 +1313,15 @@ const Home = () => {
             style={{ height: '500px' }}
             bodyStyle={{ height: '440px', overflowY: 'auto', padding: '16px' }}
           >
-            <Skeleton loading={hotStocksLoading || loading} active>
+            <Skeleton loading={riskWarningLoading || loading} active>
               <Table
-                dataSource={hotStocks}
+                dataSource={riskWarningStocks}
                 columns={stockColumns}
                 rowKey="key"
                 pagination={{
                   pageSize: 6,
                   showSizeChanger: false,
-                  showTotal: (total) => `共 ${total} 只热门股票`,
+                  showTotal: (total) => `共 ${total} 只风险警示股票`,
                   size: 'small'
                 }}
                 size="small"
@@ -1076,61 +1335,52 @@ const Home = () => {
           <Card 
             title={
               <div className="card-title-with-icon">
-                <RobotOutlined /> AI智能推荐
+                <PieChartOutlined /> 行业分析 
+                <Text type="secondary" style={{fontSize: '12px', marginLeft: '4px'}}>
+                  {industryData.length > 0 && industryData[0].rank ? '(示例数据)' : '(东方财富)'}
+                </Text>
               </div>
             }
             extra={
-              <Button 
-                type="link" 
-                onClick={() => navigate('/strategy/manage')}
-              >
-                更多
-              </Button>
+              <Space>
+                <Button 
+                  type="link" 
+                  size="small"
+                  onClick={() => navigate('/industry')}
+                  style={{ fontSize: '12px' }}
+                >
+                  查看详情
+                </Button>
+                <Button 
+                  type="link" 
+                  icon={<ReloadOutlined spin={industryLoading} />}
+                  onClick={() => fetchIndustryBoards()}
+                  disabled={industryLoading}
+                >
+                  {industryLoading ? '获取中' : '刷新'}
+                </Button>
+              </Space>
             }
-            className="ai-recommend-card"
             style={{ height: '500px' }}
-            bodyStyle={{ height: '440px', overflowY: 'auto', padding: '16px' }}
+            bodyStyle={{ height: '440px', padding: '8px' }}
           >
-            <Skeleton loading={loading} active paragraph={{ rows: 6 }}>
-              <List
-                itemLayout="horizontal"
-                dataSource={recommendedStocks}
-                renderItem={(item) => (
-                  <List.Item>
-                    <List.Item.Meta
-                      avatar={<Avatar className="stock-avatar" size="small">{item.name.substring(0, 1)}</Avatar>}
-                      title={
-                        <Space>
-                          <Text strong style={{ fontSize: '14px' }}>{item.name}</Text>
-                          <Text code style={{ fontSize: '12px' }}>{item.code}</Text>
-                          <Tag color={item.change > 0 ? "red" : "green"} size="small">
-                            {item.change > 0 ? "+" : ""}{item.change.toFixed(2)}%
-                          </Tag>
-                        </Space>
-                      }
-                      description={
-                        <div>
-                          <Tag icon={<BulbOutlined />} color="processing" size="small">推荐理由</Tag>
-                          <Text style={{ fontSize: '12px' }}>{item.reason}</Text>
-                        </div>
-                      }
-                    />
-                  </List.Item>
-                )}
+            <Skeleton loading={industryLoading || loading} active>
+              <ReactECharts
+                option={getIndustryPieChartOption()}
+                style={{ height: '400px', width: '100%' }}
+                className="echarts-for-react"
+                notMerge={true}
+                lazyUpdate={true}
               />
+              <div style={{ textAlign: 'center', marginTop: '4px' }}>
+                <Text type="secondary" style={{ fontSize: '12px' }}>
+                  {industryData.length > 0 && industryData[0].rank ? 
+                    '* 当前显示示例数据，点击刷新获取实时数据' : 
+                    '* 数据来源：东方财富行业板块'
+                  }
+                </Text>
+              </div>
             </Skeleton>
-            
-            <Divider />
-            
-            <Button 
-              type="primary" 
-              icon={<RobotOutlined />} 
-              onClick={() => navigate('/strategy/manage')}
-              block
-              size="large"
-            >
-              查看更多AI分析
-            </Button>
           </Card>
         </Col>
       </Row>

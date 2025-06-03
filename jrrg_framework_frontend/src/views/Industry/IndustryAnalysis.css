@@ -1,0 +1,693 @@
+.industry-analysis-container {
+  padding: 24px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+  position: relative;
+}
+
+.industry-analysis-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(circle at 20% 80%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+.industry-analysis-container > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* 页面标题样式 */
+.industry-analysis-container .ant-typography h2,
+.industry-analysis-container .ant-typography h3 {
+  color: white;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  margin-bottom: 0;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+}
+
+.industry-analysis-container .ant-typography h2 .anticon,
+.industry-analysis-container .ant-typography h3 .anticon {
+  background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-right: 12px;
+  font-size: 24px;
+}
+
+/* 卡片通用样式 */
+.industry-analysis-container .ant-card {
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.95);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+  position: relative;
+}
+
+.industry-analysis-container .ant-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #667eea, #764ba2, #f093fb, #f5576c);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.industry-analysis-container .ant-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.15);
+}
+
+.industry-analysis-container .ant-card:hover::before {
+  opacity: 1;
+}
+
+/* 统计卡片特殊样式 */
+.industry-analysis-container .statistic-card {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.7));
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.industry-analysis-container .statistic-card:nth-child(1) .ant-statistic-content {
+  background: linear-gradient(45deg, #667eea, #764ba2);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.industry-analysis-container .statistic-card:nth-child(2) .ant-statistic-content {
+  background: linear-gradient(45deg, #ff6b6b, #ff8e8e);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.industry-analysis-container .statistic-card:nth-child(3) .ant-statistic-content {
+  background: linear-gradient(45deg, #4ecdc4, #44a08d);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.industry-analysis-container .statistic-card:nth-child(4) .ant-statistic-content {
+  background: linear-gradient(45deg, #f093fb, #f5576c);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* 统计图标样式 */
+.industry-analysis-container .ant-statistic-title {
+  font-size: 14px;
+  color: #64748b;
+  margin-bottom: 12px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+}
+
+.industry-analysis-container .ant-statistic-content {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+.industry-analysis-container .ant-statistic .anticon {
+  margin-right: 8px;
+  font-size: 20px;
+}
+
+/* 控制面板样式 */
+.industry-analysis-container .control-panel {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.85));
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 24px;
+}
+
+.industry-analysis-container .ant-select {
+  border-radius: 12px;
+}
+
+.industry-analysis-container .ant-select .ant-select-selector {
+  border-radius: 12px !important;
+  border: 2px solid #e2e8f0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+.industry-analysis-container .ant-select:hover .ant-select-selector {
+  border-color: #667eea;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+}
+
+.industry-analysis-container .ant-select.ant-select-focused .ant-select-selector {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* 按钮组样式 */
+.industry-analysis-container .ant-radio-group {
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.industry-analysis-container .ant-radio-button-wrapper {
+  border: none !important;
+  background: linear-gradient(145deg, #f8fafc, #e2e8f0);
+  transition: all 0.3s ease;
+}
+
+.industry-analysis-container .ant-radio-button-wrapper-checked {
+  background: linear-gradient(145deg, #667eea, #764ba2) !important;
+  color: white !important;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.industry-analysis-container .ant-radio-button-wrapper:hover {
+  background: linear-gradient(145deg, #e2e8f0, #cbd5e0);
+}
+
+/* 开关样式 */
+.industry-analysis-container .ant-switch {
+  background: #e2e8f0;
+  border-radius: 20px;
+}
+
+.industry-analysis-container .ant-switch-checked {
+  background: linear-gradient(145deg, #667eea, #764ba2);
+}
+
+/* 主按钮样式 */
+.industry-analysis-container .ant-btn-primary {
+  background: linear-gradient(145deg, #667eea, #764ba2);
+  border: none;
+  border-radius: 12px;
+  height: 40px;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  transition: all 0.3s ease;
+}
+
+.industry-analysis-container .ant-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+  background: linear-gradient(145deg, #5a67d8, #6b46c1);
+}
+
+/* 图表卡片样式 */
+.industry-analysis-container .chart-card {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.9));
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  min-height: 600px;
+}
+
+.industry-analysis-container .chart-card .ant-card-head {
+  background: linear-gradient(145deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.05));
+  border-bottom: 1px solid rgba(102, 126, 234, 0.1);
+  border-radius: 16px 16px 0 0;
+}
+
+.industry-analysis-container .chart-card .ant-card-head-title {
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 18px;
+}
+
+/* 表格样式 */
+.industry-analysis-container .ant-table {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.industry-analysis-container .ant-table-thead > tr > th {
+  background: linear-gradient(145deg, #667eea, #764ba2);
+  color: white;
+  font-weight: 600;
+  text-align: center;
+  border: none;
+  font-size: 14px;
+  padding: 16px 12px;
+  position: relative;
+}
+
+.industry-analysis-container .ant-table-thead > tr > th::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+}
+
+.industry-analysis-container .ant-table-tbody > tr {
+  transition: all 0.3s ease;
+}
+
+.industry-analysis-container .ant-table-tbody > tr:hover > td {
+  background: linear-gradient(145deg, #f0f7ff, #e6f3ff) !important;
+  transform: scale(1.01);
+}
+
+.industry-analysis-container .ant-table-tbody > tr:nth-child(even) {
+  background: linear-gradient(145deg, #fafbfc, #f8fafc);
+}
+
+.industry-analysis-container .ant-table-tbody > tr:nth-child(odd) {
+  background: white;
+}
+
+/* 标签样式 */
+.industry-analysis-container .ant-tag {
+  border-radius: 20px;
+  font-weight: 600;
+  border: none;
+  padding: 4px 12px;
+  font-size: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.industry-analysis-container .ant-tag-red {
+  background: linear-gradient(145deg, #dc2626, #991b1b);
+  color: white;
+}
+
+.industry-analysis-container .ant-tag-green {
+  background: linear-gradient(145deg, #16a34a, #15803d);
+  color: white;
+}
+
+/* ECharts容器样式 */
+.industry-analysis-container .echarts-for-react {
+  border-radius: 16px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.8));
+  padding: 24px;
+  margin: 12px;
+  box-shadow: 
+    inset 0 2px 4px rgba(0, 0, 0, 0.05),
+    0 4px 20px rgba(0, 0, 0, 0.08);
+  min-height: 750px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.industry-analysis-container .echarts-for-react:hover {
+  box-shadow: 
+    inset 0 2px 4px rgba(0, 0, 0, 0.05),
+    0 8px 32px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
+}
+
+/* 加载动画 */
+.industry-analysis-container .ant-spin-container {
+  border-radius: 16px;
+}
+
+.industry-analysis-container .ant-spin-dot {
+  color: #667eea;
+}
+
+.industry-analysis-container .ant-spin-dot-item {
+  background-color: #667eea;
+}
+
+/* 分页样式 */
+.industry-analysis-container .ant-pagination {
+  margin-top: 24px;
+}
+
+.industry-analysis-container .ant-pagination .ant-pagination-item {
+  border-radius: 8px;
+  border: 2px solid #e2e8f0;
+  transition: all 0.3s ease;
+}
+
+.industry-analysis-container .ant-pagination .ant-pagination-item:hover {
+  border-color: #667eea;
+  color: #667eea;
+}
+
+.industry-analysis-container .ant-pagination .ant-pagination-item-active {
+  background: linear-gradient(145deg, #667eea, #764ba2);
+  border-color: #667eea;
+}
+
+.industry-analysis-container .ant-pagination .ant-pagination-item-active a {
+  color: white;
+}
+
+/* 皇冠图标样式 */
+.industry-analysis-container .crown-gold {
+  color: #ffd700;
+  filter: drop-shadow(0 2px 4px rgba(255, 215, 0, 0.5));
+  animation: crown-glow 2s ease-in-out infinite alternate;
+}
+
+.industry-analysis-container .crown-silver {
+  color: #c0c0c0;
+  filter: drop-shadow(0 2px 4px rgba(192, 192, 192, 0.5));
+}
+
+.industry-analysis-container .crown-bronze {
+  color: #cd7f32;
+  filter: drop-shadow(0 2px 4px rgba(205, 127, 50, 0.5));
+}
+
+@keyframes crown-glow {
+  0% {
+    filter: drop-shadow(0 2px 4px rgba(255, 215, 0, 0.5));
+  }
+  100% {
+    filter: drop-shadow(0 2px 8px rgba(255, 215, 0, 0.8));
+  }
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .industry-analysis-container {
+    padding: 16px;
+  }
+  
+  .industry-analysis-container .ant-card {
+    margin-bottom: 16px;
+  }
+  
+  .industry-analysis-container .echarts-for-react {
+    height: 450px !important;
+    margin: 4px;
+    padding: 12px;
+    min-height: 450px;
+  }
+  
+  .industry-analysis-container .ant-statistic-content {
+    font-size: 20px;
+  }
+  
+  .industry-analysis-container .control-panel {
+    padding: 16px;
+  }
+
+  .industry-analysis-container .ant-tabs-content-holder {
+    padding: 16px;
+  }
+  
+  .industry-analysis-container .ant-tabs-tabpane {
+    min-height: 500px;
+  }
+  
+  .industry-analysis-container .chart-radio-group {
+    padding: 6px;
+    gap: 2px;
+  }
+  
+  .industry-analysis-container .chart-radio-group .ant-radio-button-wrapper {
+    font-size: 11px;
+    height: 32px;
+    line-height: 30px;
+    padding: 0 8px;
+    min-width: 65px;
+  }
+  
+  .industry-analysis-container .chart-radio-group .ant-radio-button-wrapper .anticon {
+    margin-right: 2px;
+    font-size: 12px;
+  }
+  
+  .industry-analysis-container .ant-tabs-tab {
+    margin-right: 4px !important;
+    font-size: 14px !important;
+  }
+}
+
+@media (max-width: 576px) {
+  .industry-analysis-container .echarts-for-react {
+    height: 400px !important;
+    min-height: 400px;
+    padding: 8px;
+  }
+  
+  .industry-analysis-container .ant-table {
+    font-size: 12px;
+  }
+  
+  .industry-analysis-container .ant-card {
+    border-radius: 12px;
+  }
+
+  .industry-analysis-container .ant-tabs-content-holder {
+    padding: 12px;
+  }
+  
+  .industry-analysis-container .ant-tabs-tabpane {
+    min-height: 450px;
+  }
+  
+  .industry-analysis-container .chart-radio-group {
+    padding: 4px;
+  }
+  
+  .industry-analysis-container .chart-radio-group .ant-radio-button-wrapper {
+    font-size: 10px;
+    height: 28px;
+    line-height: 26px;
+    padding: 0 6px;
+    min-width: 55px;
+  }
+  
+  .industry-analysis-container .chart-radio-group .ant-radio-button-wrapper .anticon {
+    display: none;
+  }
+  
+  .industry-analysis-container .ant-tabs-tab .anticon {
+    display: none;
+  }
+}
+
+/* 自定义滚动条 */
+.industry-analysis-container *::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.industry-analysis-container *::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.industry-analysis-container *::-webkit-scrollbar-thumb {
+  background: linear-gradient(145deg, #667eea, #764ba2);
+  border-radius: 4px;
+}
+
+.industry-analysis-container *::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(145deg, #5a67d8, #6b46c1);
+}
+
+/* 动画效果 */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.industry-analysis-container .ant-card {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+.industry-analysis-container .ant-card:nth-child(1) { animation-delay: 0.1s; }
+.industry-analysis-container .ant-card:nth-child(2) { animation-delay: 0.2s; }
+.industry-analysis-container .ant-card:nth-child(3) { animation-delay: 0.3s; }
+.industry-analysis-container .ant-card:nth-child(4) { animation-delay: 0.4s; }
+
+/* Tabs样式 */
+.industry-analysis-container .ant-tabs {
+  border-radius: 12px;
+}
+
+.industry-analysis-container .ant-tabs-tab {
+  border-radius: 12px 12px 0 0 !important;
+  background: linear-gradient(145deg, #f8fafc, #e2e8f0) !important;
+  border: 2px solid #e2e8f0 !important;
+  margin-right: 8px !important;
+  font-weight: 600 !important;
+  transition: all 0.3s ease !important;
+  color: #64748b !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.industry-analysis-container .ant-tabs-tab::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #667eea, #764ba2);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.industry-analysis-container .ant-tabs-tab:hover {
+  background: linear-gradient(145deg, #e2e8f0, #cbd5e0) !important;
+  color: #1e293b !important;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+}
+
+.industry-analysis-container .ant-tabs-tab-active {
+  background: linear-gradient(145deg, #667eea, #764ba2) !important;
+  color: white !important;
+  border-color: #667eea !important;
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+}
+
+.industry-analysis-container .ant-tabs-tab-active::before {
+  opacity: 1;
+}
+
+.industry-analysis-container .ant-tabs-tab-active:hover {
+  background: linear-gradient(145deg, #5a67d8, #6b46c1) !important;
+  color: white !important;
+}
+
+.industry-analysis-container .ant-tabs-content-holder {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.6));
+  border-radius: 0 12px 12px 12px;
+  padding: 24px;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.industry-analysis-container .ant-tabs-tabpane {
+  min-height: 900px;
+}
+
+.industry-analysis-container .ant-tabs .ant-tabs-tab .anticon {
+  margin-right: 6px;
+  font-size: 16px;
+}
+
+/* 图表切换按钮组样式 */
+.industry-analysis-container .chart-radio-group {
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 12px;
+  padding: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: center;
+}
+
+.industry-analysis-container .chart-radio-group .ant-radio-button-wrapper {
+  margin-right: 0 !important;
+  border-radius: 8px !important;
+  border: none !important;
+  background: rgba(255, 255, 255, 0.6) !important;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  font-size: 12px;
+  height: 36px;
+  line-height: 34px;
+  padding: 0 12px;
+  min-width: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.industry-analysis-container .chart-radio-group .ant-radio-button-wrapper .anticon {
+  margin-right: 4px;
+  font-size: 14px;
+}
+
+.industry-analysis-container .chart-radio-group .ant-radio-button-wrapper-checked {
+  background: linear-gradient(145deg, #667eea, #764ba2) !important;
+  color: white !important;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+  transform: translateY(-1px);
+}
+
+.industry-analysis-container .chart-radio-group .ant-radio-button-wrapper:hover {
+  background: rgba(255, 255, 255, 0.9) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.industry-analysis-container .chart-radio-group .ant-radio-button-wrapper-checked:hover {
+  background: linear-gradient(145deg, #5a67d8, #6b46c1) !important;
+  color: white !important;
+}
+
+/* 动画效果 */
+@keyframes tabSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.industry-analysis-container .ant-tabs-tabpane-active {
+  animation: tabSlideIn 0.5s ease-out;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .industry-analysis-container .ant-tabs-content-holder {
+    padding: 16px;
+  }
+  
+  .industry-analysis-container .ant-tabs-tabpane {
+    min-height: 400px;
+  }
+  
+  .industry-analysis-container .chart-radio-group {
+    padding: 6px;
+  }
+  
+  .industry-analysis-container .ant-tabs-tab {
+    margin-right: 4px !important;
+    font-size: 14px !important;
+  }
+}
+
+@media (max-width: 576px) {
+  .industry-analysis-container .ant-tabs-content-holder {
+    padding: 12px;
+  }
+  
+  .industry-analysis-container .ant-tabs-tabpane {
+    min-height: 350px;
+  }
+  
+  .industry-analysis-container .ant-tabs-tab .anticon {
+    display: none;
+  }
+} 
