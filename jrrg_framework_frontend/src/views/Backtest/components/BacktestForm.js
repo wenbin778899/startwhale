@@ -11,13 +11,20 @@ import {
   Spin,
   Space,
   Tooltip,
-  Typography
+  Typography,
+  Card
 } from 'antd';
 import {
   QuestionCircleOutlined,
   ExperimentOutlined,
   SyncOutlined,
-  CheckCircleOutlined
+  CheckCircleOutlined,
+  SettingOutlined,
+  CalendarOutlined,
+  MoneyCollectOutlined,
+  PercentageOutlined,
+  StockOutlined,
+  RocketOutlined
 } from '@ant-design/icons';
 import moment from 'moment';
 import { getBacktestStrategies, runBacktest } from '../../../api/strategy';
@@ -25,7 +32,7 @@ import http from '../../../utils/http';
 
 const { Option } = Select;
 const { RangePicker } = DatePicker;
-const { Title } = Typography;
+const { Title, Text, Paragraph } = Typography;
 
 const BacktestForm = ({ favoriteStocks, onBacktestComplete }) => {
   const [form] = Form.useForm();
@@ -267,184 +274,229 @@ const BacktestForm = ({ favoriteStocks, onBacktestComplete }) => {
         form={form}
         layout="vertical"
         onFinish={handleSubmit}
-        initialValues={{
-          initial_cash: 100000,
-          commission: 0.1, // 0.1%
-          date_range: [moment().subtract(1, 'year'), moment()]
-        }}
+        requiredMark="optional"
+        className="backtest-form-container"
       >
-        {/* 股票选择 */}
-        <Form.Item
-          name="stock_code"
-          label="选择股票"
-          rules={[{ required: true, message: '请选择股票' }]}
-        >
-          <Select
-            placeholder="请选择自选股票"
-            showSearch
-            optionFilterProp="children"
-            filterOption={(input, option) =>
-              option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
-            }
-          >
-            {favoriteStocks.map(stock => (
-              <Option key={stock.stock_code} value={stock.stock_code}>
-                {stock.stock_code} - {stock.stock_name}
-              </Option>
-            ))}
-          </Select>
-        </Form.Item>
-        
-        {/* 策略选择 */}
         <div className="strategy-select-container">
+          <Card
+            title={
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <RocketOutlined style={{ marginRight: 8, color: '#1890ff' }} />
+                <span>选择回测策略</span>
+              </div>
+            }
+            bordered={false}
+            className="form-card"
+          >
+            <Form.Item
+              name="strategy_name"
+              label="策略"
+              rules={[{ required: true, message: '请选择策略' }]}
+            >
+              <Select
+                placeholder="选择回测策略"
+                onChange={handleStrategyChange}
+                loading={strategiesLoading}
+                disabled={strategiesLoading}
+                suffixIcon={<SettingOutlined />}
+              >
+                {strategies.map(strategy => (
+                  <Option key={strategy.id} value={strategy.id}>
+                    {strategy.name}
+                  </Option>
+                ))}
+              </Select>
+            </Form.Item>
+            
+            {selectedStrategy && (
+              <Paragraph className="strategy-description">
+                {selectedStrategy.description}
+              </Paragraph>
+            )}
+          </Card>
+        </div>
+        
+        <Card
+          title={
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <StockOutlined style={{ marginRight: 8, color: '#1890ff' }} />
+              <span>选择股票和时间范围</span>
+            </div>
+          }
+          bordered={false}
+          className="form-card"
+        >
           <Form.Item
-            name="strategy_name"
-            label="选择策略"
-            rules={[{ required: true, message: '请选择策略' }]}
+            name="stock_code"
+            label="股票"
+            rules={[{ required: true, message: '请选择股票' }]}
           >
             <Select
-              placeholder="请选择回测策略"
-              loading={strategiesLoading}
-              onChange={handleStrategyChange}
+              placeholder="选择回测股票"
+              showSearch
+              optionFilterProp="children"
+              filterOption={(input, option) =>
+                option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+              }
             >
-              {strategies.map(strategy => (
-                <Option key={strategy.id} value={strategy.id}>
-                  {strategy.name}
+              {favoriteStocks.map(stock => (
+                <Option key={stock.stock_code} value={stock.stock_code}>
+                  {stock.stock_code} {stock.stock_name}
                 </Option>
               ))}
             </Select>
           </Form.Item>
-          
-          {selectedStrategy && (
-            <div className="strategy-description">
-              {selectedStrategy.description}
+
+          <Form.Item
+            name="date_range"
+            label={
+              <span>
+                回测日期范围 
+                <Tooltip title="建议选择至少6个月的日期范围以获得更准确的回测结果">
+                  <QuestionCircleOutlined style={{ marginLeft: 4 }} />
+                </Tooltip>
+              </span>
+            }
+            rules={[{ required: true, message: '请选择回测日期范围' }]}
+          >
+            <RangePicker 
+              style={{ width: '100%' }}
+              format="YYYY-MM-DD"
+              placeholder={['开始日期', '结束日期']}
+              ranges={{
+                '近一个月': [moment().subtract(1, 'months'), moment()],
+                '近三个月': [moment().subtract(3, 'months'), moment()],
+                '近六个月': [moment().subtract(6, 'months'), moment()],
+                '近一年': [moment().subtract(1, 'years'), moment()],
+                '近两年': [moment().subtract(2, 'years'), moment()],
+              }}
+              allowClear={true}
+              suffixIcon={<CalendarOutlined />}
+            />
+          </Form.Item>
+        </Card>
+        
+        <Card
+          title={
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <MoneyCollectOutlined style={{ marginRight: 8, color: '#1890ff' }} />
+              <span>回测资金设置</span>
             </div>
-          )}
-        </div>
-        
-        {/* 回测区间 */}
-        <Form.Item
-          name="date_range"
-          label="回测区间"
-          rules={[{ required: true, message: '请选择回测区间' }]}
+          }
+          bordered={false}
+          className="form-card"
         >
-          <RangePicker
-            style={{ width: '100%' }}
-            format="YYYY-MM-DD"
-            disabledDate={current => current && current > moment()}
-          />
-        </Form.Item>
-        
-        <div className="date-range-selector">
-          {/* 初始资金 */}
-          <Form.Item
-            name="initial_cash"
-            label={
-              <span>
-                初始资金
-                <Tooltip title="回测开始时的初始资金数量">
-                  <QuestionCircleOutlined style={{ marginLeft: 4 }} />
-                </Tooltip>
-              </span>
-            }
-            rules={[{ required: true, message: '请输入初始资金' }]}
-          >
-            <InputNumber
-              min={10000}
-              max={10000000}
-              step={10000}
-              style={{ width: '100%' }}
-              formatter={value => `¥ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-              parser={value => value.replace(/\¥\s?|(,*)/g, '')}
-            />
-          </Form.Item>
-          
-          {/* 交易手续费 */}
-          <Form.Item
-            name="commission"
-            label={
-              <span>
-                交易手续费率
-                <Tooltip title="单边交易手续费率，如0.1%">
-                  <QuestionCircleOutlined style={{ marginLeft: 4 }} />
-                </Tooltip>
-              </span>
-            }
-            rules={[{ required: true, message: '请输入手续费率' }]}
-          >
-            <InputNumber
-              min={0}
-              max={1}
-              step={0.01}
-              style={{ width: '100%' }}
-              formatter={value => `${value}%`}
-              parser={value => value.replace('%', '')}
-            />
-          </Form.Item>
-        </div>
-        
-        {/* 策略参数 */}
-        {selectedStrategy && selectedStrategy.params && (
-          <div className="strategy-params-form">
-            <div className="strategy-params-title">策略参数设置</div>
+          <div className="date-range-selector">
+            <Form.Item
+              name="initial_cash"
+              label="初始资金"
+              initialValue={100000}
+              rules={[{ required: true, message: '请设置初始资金' }]}
+              style={{ width: '48%' }}
+            >
+              <InputNumber
+                min={10000}
+                max={10000000}
+                step={10000}
+                style={{ width: '100%' }}
+                formatter={value => `¥ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                parser={value => value.replace(/¥\s?|(,*)/g, '')}
+              />
+            </Form.Item>
             
-            {selectedStrategy.params.map(param => (
-              <Form.Item
-                key={param.name}
-                name={['strategy_params', param.name]}
-                label={
-                  <span>
-                    {param.label}
-                    {param.description && (
-                      <Tooltip title={param.description}>
-                        <QuestionCircleOutlined style={{ marginLeft: 4 }} />
-                      </Tooltip>
-                    )}
-                  </span>
-                }
-                initialValue={param.default}
-              >
-                <InputNumber
-                  min={param.min}
-                  max={param.max}
-                  step={param.step || 1}
-                  style={{ width: '100%' }}
-                />
-              </Form.Item>
-            ))}
+            <Form.Item
+              name="commission"
+              label={
+                <span>
+                  手续费率(%) 
+                  <Tooltip title="交易手续费比例，默认0.1%">
+                    <QuestionCircleOutlined style={{ marginLeft: 4 }} />
+                  </Tooltip>
+                </span>
+              }
+              initialValue={0.1}
+              rules={[{ required: true, message: '请设置手续费率' }]}
+              style={{ width: '48%' }}
+            >
+              <InputNumber
+                min={0}
+                max={5}
+                step={0.01}
+                style={{ width: '100%' }}
+                formatter={value => `${value}%`}
+                parser={value => value.replace('%', '')}
+              />
+            </Form.Item>
           </div>
+        </Card>
+
+        {/* 策略参数设置 */}
+        {selectedStrategy && selectedStrategy.params && (
+          <Card
+            title={
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <SettingOutlined style={{ marginRight: 8, color: '#1890ff' }} />
+                <span>策略参数设置</span>
+              </div>
+            }
+            bordered={false}
+            className="strategy-params-form"
+          >
+            <div className="strategy-params-content">
+              {selectedStrategy.params.map(param => (
+                <Form.Item
+                  key={param.name}
+                  label={
+                    <span>
+                      {param.label} 
+                      {param.name !== 'size' && (
+                        <Tooltip title={`推荐范围: ${param.min} - ${param.max}`}>
+                          <QuestionCircleOutlined style={{ marginLeft: 4 }} />
+                        </Tooltip>
+                      )}
+                    </span>
+                  }
+                  name={['strategy_params', param.name]}
+                  initialValue={param.default}
+                  style={{ width: param.name === 'size' ? '100%' : '48%', display: 'inline-block', paddingRight: '10px' }}
+                >
+                  <InputNumber
+                    min={param.min}
+                    max={param.max}
+                    step={param.step || 1}
+                    style={{ width: '100%' }}
+                  />
+                </Form.Item>
+              ))}
+            </div>
+          </Card>
         )}
         
-        <Divider />
-        
-        {/* 添加在提交按钮上方 */}
-        <Form.Item>
-          <Space style={{ width: '100%', justifyContent: 'center' }}>
+        <div className="form-actions">
+          <Form.Item>
             <Button
               type="default"
               icon={<SyncOutlined />}
               onClick={testStockData}
+              className="test-data-button"
             >
               测试股票数据
             </Button>
-            <Tooltip title="在执行回测前，先测试所选股票在指定日期范围内是否有可用数据">
-              <QuestionCircleOutlined />
-            </Tooltip>
-          </Space>
-        </Form.Item>
-        
-        {/* 提交按钮 */}
-        <Form.Item>
-          <Button
-            type="primary"
-            htmlType="submit"
-            icon={<ExperimentOutlined />}
-            loading={loading}
-            block
-          >
-            开始回测
-          </Button>
-        </Form.Item>
+          </Form.Item>
+          
+          <Form.Item>
+            <Button
+              type="primary"
+              htmlType="submit"
+              icon={<ExperimentOutlined />}
+              loading={loading}
+              block
+              className="submit-button"
+            >
+              开始回测
+            </Button>
+          </Form.Item>
+        </div>
       </Form>
     </div>
   );

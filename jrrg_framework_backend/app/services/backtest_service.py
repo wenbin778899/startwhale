@@ -9,7 +9,7 @@ import io
 import base64
 # 设置matplotlib使用非交互式后端，防止弹出窗口
 import matplotlib
-matplotlib.use('Agg')  # 必须在导入pyplot之前设置
+matplotlib.use('TkAgg')  # 必须在导入pyplot之前设置
 import matplotlib.pyplot as plt
 from matplotlib.dates import date2num
 from datetime import datetime, timedelta
@@ -547,7 +547,7 @@ class BacktestService:
                 plt.close('all')
                 
                 # 创建一个新的图表对象但不显示
-                fig = plt.figure(figsize=(12, 8))
+                #fig = plt.figure(figsize=(12, 8))
                 
                 # 使用returnfigs=True确保不显示图形而是返回对象
                 figs = cerebro.plot(style='candlestick', barup='red', bardown='green', 

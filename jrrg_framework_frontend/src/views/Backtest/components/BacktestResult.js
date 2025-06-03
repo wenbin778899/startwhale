@@ -11,7 +11,9 @@ import {
   Tag,
   Tooltip,
   Typography,
-  Alert
+  Alert,
+  Modal,
+  Progress
 } from 'antd';
 import {
   ArrowLeftOutlined,
@@ -21,7 +23,13 @@ import {
   FallOutlined,
   LineChartOutlined,
   CalculatorOutlined,
-  PercentageOutlined
+  PercentageOutlined,
+  FullscreenOutlined,
+  TrophyOutlined,
+  TransactionOutlined,
+  MoneyCollectOutlined,
+  StockOutlined,
+  CalendarOutlined
 } from '@ant-design/icons';
 import { getBacktestDetail } from '../../../api/strategy';
 
@@ -97,6 +105,9 @@ const tradeColumns = [
 const BacktestResult = ({ backtestResult, onBack }) => {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
+  const [imageLoading, setImageLoading] = useState(true);
+  const [imageError, setImageError] = useState(false);
+  const [fadeIn, setFadeIn] = useState(false);
 
   // 加载回测详情
   useEffect(() => {
@@ -107,7 +118,13 @@ const BacktestResult = ({ backtestResult, onBack }) => {
       } else {
         // 直接使用回测结果
         setResult(backtestResult);
+        setImageLoading(true);
+        setImageError(false);
       }
+      // 添加延迟以创建淡入效果
+      setTimeout(() => {
+        setFadeIn(true);
+      }, 100);
     }
   }, [backtestResult]);
 
@@ -118,6 +135,8 @@ const BacktestResult = ({ backtestResult, onBack }) => {
       const response = await getBacktestDetail(id);
       if (response && response.data) {
         setResult(response.data);
+        setImageLoading(true);
+        setImageError(false);
       }
     } catch (error) {
       console.error('获取回测详情失败:', error);
@@ -125,6 +144,17 @@ const BacktestResult = ({ backtestResult, onBack }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // 处理图片加载完成
+  const handleImageLoad = () => {
+    setImageLoading(false);
+  };
+
+  // 处理图片加载错误
+  const handleImageError = () => {
+    setImageLoading(false);
+    setImageError(true);
   };
 
   // 如果没有回测结果，显示加载中
@@ -136,13 +166,59 @@ const BacktestResult = ({ backtestResult, onBack }) => {
     );
   }
 
+  // 获取合适的图标和颜色
+  const getStatisticIcon = (type) => {
+    switch(type) {
+      case 'total_return':
+        return result.total_return >= 0 ? <RiseOutlined /> : <FallOutlined />;
+      case 'annual_return':
+        return result.annual_return >= 0 ? <RiseOutlined /> : <FallOutlined />;
+      case 'max_drawdown':
+        return <PercentageOutlined />;
+      case 'sharpe_ratio':
+        return <CalculatorOutlined />;
+      case 'trade_count':
+        return <TransactionOutlined />;
+      case 'win_rate':
+        return <TrophyOutlined />;
+      case 'initial_cash':
+        return <MoneyCollectOutlined />;
+      case 'final_value':
+        return <DollarOutlined />;
+      default:
+        return <StockOutlined />;
+    }
+  };
+
+  const getStatisticColor = (type) => {
+    switch(type) {
+      case 'total_return':
+        return result.total_return >= 0 ? '#ff4d4f' : '#52c41a';
+      case 'annual_return':
+        return result.annual_return >= 0 ? '#ff4d4f' : '#52c41a';
+      case 'max_drawdown':
+        return '#cf1322';
+      case 'sharpe_ratio':
+        return result.sharpe_ratio >= 2 ? '#52c41a' : 
+               result.sharpe_ratio >= 1 ? '#1890ff' : '#faad14';
+      case 'win_rate':
+        return result.win_rate >= 60 ? '#52c41a' : 
+               result.win_rate >= 40 ? '#1890ff' : '#faad14';
+      case 'final_value':
+        return result.final_value >= result.initial_cash ? '#ff4d4f' : '#52c41a';
+      default:
+        return '#1890ff';
+    }
+  };
+
   return (
-    <div className="backtest-result">
+    <div className={`backtest-result ${fadeIn ? 'fade-in' : ''}`} style={{ transition: 'opacity 0.5s, transform 0.5s', opacity: fadeIn ? 1 : 0, transform: fadeIn ? 'translateY(0)' : 'translateY(20px)' }}>
       <Button
         type="primary"
         icon={<ArrowLeftOutlined />}
         onClick={onBack}
         style={{ marginBottom: 16 }}
+        className="back-button"
       >
         返回
       </Button>
@@ -150,11 +226,18 @@ const BacktestResult = ({ backtestResult, onBack }) => {
       <Card
         title={
           <div style={{ display: 'flex', alignItems: 'center' }}>
-            <LineChartOutlined style={{ marginRight: 8 }} />
+            <LineChartOutlined style={{ marginRight: 8, fontSize: 20 }} />
             <span>{result.strategy_name} - {result.stock_code} {result.stock_name}</span>
           </div>
         }
         loading={loading}
+        className="result-card"
+        extra={
+          <Tag color="#1890ff" style={{ fontSize: '14px', padding: '4px 12px' }}>
+            <CalendarOutlined style={{ marginRight: 4 }} />
+            {result.start_date} 至 {result.end_date}
+          </Tag>
+        }
       >
         {result.total_return === 0 && result.annual_return === 0 && result.max_drawdown === 0 && (
           <Alert
@@ -172,7 +255,7 @@ const BacktestResult = ({ backtestResult, onBack }) => {
             }
             type="warning"
             showIcon
-            style={{ marginBottom: 16 }}
+            style={{ marginBottom: 24, borderRadius: 8 }}
           />
         )}
         
@@ -182,43 +265,75 @@ const BacktestResult = ({ backtestResult, onBack }) => {
               title="总收益率"
               value={result.total_return}
               precision={2}
-              valueStyle={{ color: result.total_return >= 0 ? '#ff4d4f' : '#52c41a' }}
-              prefix={result.total_return >= 0 ? <RiseOutlined /> : <FallOutlined />}
+              valueStyle={{ color: getStatisticColor('total_return') }}
+              prefix={getStatisticIcon('total_return')}
               suffix="%"
             />
+            {result.total_return !== 0 && (
+              <Progress 
+                percent={Math.min(Math.abs(result.total_return), 100)} 
+                showInfo={false} 
+                strokeColor={getStatisticColor('total_return')}
+                style={{ marginTop: 8 }}
+              />
+            )}
           </div>
           <div className="summary-item">
             <Statistic
               title="年化收益率"
               value={result.annual_return}
               precision={2}
-              valueStyle={{ color: result.annual_return >= 0 ? '#ff4d4f' : '#52c41a' }}
-              prefix={result.annual_return >= 0 ? <RiseOutlined /> : <FallOutlined />}
+              valueStyle={{ color: getStatisticColor('annual_return') }}
+              prefix={getStatisticIcon('annual_return')}
               suffix="%"
             />
+            {result.annual_return !== 0 && (
+              <Progress 
+                percent={Math.min(Math.abs(result.annual_return), 100)} 
+                showInfo={false} 
+                strokeColor={getStatisticColor('annual_return')}
+                style={{ marginTop: 8 }}
+              />
+            )}
           </div>
           <div className="summary-item">
             <Statistic
               title="最大回撤"
               value={result.max_drawdown}
               precision={2}
-              valueStyle={{ color: '#cf1322' }}
-              prefix={<PercentageOutlined />}
+              valueStyle={{ color: getStatisticColor('max_drawdown') }}
+              prefix={getStatisticIcon('max_drawdown')}
               suffix="%"
             />
+            {result.max_drawdown > 0 && (
+              <Progress 
+                percent={Math.min(result.max_drawdown, 100)} 
+                showInfo={false} 
+                strokeColor={getStatisticColor('max_drawdown')}
+                style={{ marginTop: 8 }}
+              />
+            )}
           </div>
           <div className="summary-item">
             <Statistic
               title="夏普比率"
               value={result.sharpe_ratio}
               precision={2}
-              prefix={<CalculatorOutlined />}
+              valueStyle={{ color: getStatisticColor('sharpe_ratio') }}
+              prefix={getStatisticIcon('sharpe_ratio')}
+            />
+            <Progress 
+              percent={Math.min(result.sharpe_ratio * 33.3, 100)} 
+              showInfo={false} 
+              strokeColor={getStatisticColor('sharpe_ratio')}
+              style={{ marginTop: 8 }}
             />
           </div>
           <div className="summary-item">
             <Statistic
               title="交易次数"
               value={result.trade_count}
+              prefix={getStatisticIcon('trade_count')}
             />
           </div>
           <div className="summary-item">
@@ -226,7 +341,15 @@ const BacktestResult = ({ backtestResult, onBack }) => {
               title="胜率"
               value={result.win_rate}
               precision={2}
+              valueStyle={{ color: getStatisticColor('win_rate') }}
+              prefix={getStatisticIcon('win_rate')}
               suffix="%"
+            />
+            <Progress 
+              percent={result.win_rate} 
+              showInfo={false} 
+              strokeColor={getStatisticColor('win_rate')}
+              style={{ marginTop: 8 }}
             />
           </div>
           <div className="summary-item">
@@ -235,6 +358,7 @@ const BacktestResult = ({ backtestResult, onBack }) => {
               value={result.initial_cash}
               precision={2}
               prefix="¥"
+              prefix={getStatisticIcon('initial_cash')}
             />
           </div>
           <div className="summary-item">
@@ -242,15 +366,24 @@ const BacktestResult = ({ backtestResult, onBack }) => {
               title="最终价值"
               value={result.final_value}
               precision={2}
+              prefix={getStatisticIcon('final_value')}
               prefix="¥"
-              valueStyle={{ color: result.final_value >= result.initial_cash ? '#ff4d4f' : '#52c41a' }}
+              valueStyle={{ color: getStatisticColor('final_value') }}
             />
+            {result.initial_cash > 0 && (
+              <Progress 
+                percent={Math.min((result.final_value / result.initial_cash) * 100, 200)} 
+                showInfo={false} 
+                strokeColor={getStatisticColor('final_value')}
+                style={{ marginTop: 8 }}
+              />
+            )}
           </div>
         </div>
         
         <Divider orientation="left">回测参数</Divider>
         
-        <Descriptions bordered size="small" column={{ xs: 1, sm: 2, md: 3 }}>
+        <Descriptions bordered size="small" column={{ xs: 1, sm: 2, md: 3 }} className="backtest-descriptions">
           <Descriptions.Item label="股票代码">{result.stock_code}</Descriptions.Item>
           <Descriptions.Item label="股票名称">{result.stock_name}</Descriptions.Item>
           <Descriptions.Item label="策略名称">{result.strategy_name}</Descriptions.Item>
@@ -262,12 +395,57 @@ const BacktestResult = ({ backtestResult, onBack }) => {
         {result.chart_image && (
           <>
             <Divider orientation="left">回测图表</Divider>
-            <div className="chart-container">
+            <div className="chart-container" style={{ position: 'relative', margin: '16px 0' }}>
+              {imageLoading && (
+                <div style={{ textAlign: 'center', padding: '40px 0' }}>
+                  <Spin tip="图表加载中..." />
+                </div>
+              )}
+              {imageError && (
+                <Alert
+                  message="图表加载失败"
+                  description="无法显示回测图表，请尝试重新加载页面或重新执行回测"
+                  type="error"
+                  showIcon
+                />
+              )}
               <img
                 src={`data:image/png;base64,${result.chart_image}`}
                 alt="回测结果图表"
-                style={{ width: '100%', height: 'auto' }}
+                style={{ 
+                  width: '100%', 
+                  height: 'auto',
+                  display: imageLoading ? 'none' : 'block'
+                }}
+                onLoad={handleImageLoad}
+                onError={handleImageError}
               />
+              <div style={{ textAlign: 'right', marginTop: '8px' }}>
+                <Tooltip title="全屏查看">
+                  <Button 
+                    icon={<FullscreenOutlined />} 
+                    onClick={() => {
+                      Modal.info({
+                        title: '回测图表',
+                        content: (
+                          <div style={{ textAlign: 'center' }}>
+                            <img
+                              src={`data:image/png;base64,${result.chart_image}`}
+                              alt="回测结果图表全屏"
+                              style={{ width: '100%', maxWidth: '100%', height: 'auto' }}
+                            />
+                          </div>
+                        ),
+                        width: '90%',
+                        maskClosable: true,
+                        okText: '关闭'
+                      });
+                    }}
+                  >
+                    全屏查看
+                  </Button>
+                </Tooltip>
+              </div>
             </div>
           </>
         )}
@@ -291,7 +469,7 @@ const BacktestResult = ({ backtestResult, onBack }) => {
         {result.debug_info && (
           <>
             <Divider orientation="left">调试信息</Divider>
-            <Descriptions bordered size="small" column={{ xs: 1, sm: 2, md: 3 }}>
+            <Descriptions bordered size="small" column={{ xs: 1, sm: 2, md: 3 }} className="debug-descriptions">
               <Descriptions.Item label="数据长度">{result.debug_info.data_length} 条记录</Descriptions.Item>
               <Descriptions.Item label="数据日期范围">{result.debug_info.data_range}</Descriptions.Item>
               <Descriptions.Item label="是否有交易">
