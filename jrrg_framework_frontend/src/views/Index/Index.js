@@ -84,14 +84,14 @@ const Index = () => {
             // 策略管理实际上设计策略的增删改查，但是可以将其设计成一个菜单项，页面用于显示策略列表，通过弹窗的方式来实现对策略的更改
             getItem('AI股市', '/strategy/manage', <EditOutlined />),
             // 回测策略菜单项，用于切换到回测策略页面
-            getItem('回测策略', '/strategy/backtest', <RollbackOutlined />),
             // AI基金菜单项
-            getItem('AI基金', '/strategy/fund', <StarOutlined />)
+            getItem('AI基金', '/strategy/fund', <StarOutlined />),
+            getItem('回测策略', '/strategy/backtest', <RollbackOutlined />)
         ]),
         getItem('股票行情', '/stock', <LineChartOutlined />),
         getItem('持仓管理', '/portfolio', <WalletOutlined />),
         // 用于进行手工交易
-        getItem('股票交易', '/trade', <MoneyCollectOutlined />),
+        //getItem('股票交易', '/trade', <MoneyCollectOutlined />),
         getItem('个人中心', '/user', <UserOutlined />, [
             getItem('个人资料', '/user/detail', <ProfileOutlined />),
             getItem('投资者画像', '/user/profile', <IdcardOutlined />)

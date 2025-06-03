@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "antd": "^5.23.3",
+    "@ant-design/icons": "^6.0.0",
+    "antd": "^5.25.4",
     "axios": "^1.7.9",
     "cra-template": "1.2.0",
     "decimal.js": "^10.5.0",

@@ -19,6 +19,7 @@ import { useNavigate } from 'react-router-dom';
 import { setNavigate } from './utils/http';
 import RequierAuth from './components/RequireAuth/RequireAuth';
 import ThemeToggle from './components/ThemeToggle';
+import AIAssistant from './components/AIAssistant/AIAssistant';
 
 // NOTE 由于使用了useNavigate，所以必须单独定义一个页面（AppRoutes），你可以理解为固定写法
 function AppRoutes() {
@@ -63,6 +64,9 @@ function AppRoutes() {
       
       {/* 添加全局主题切换按钮，使其在所有页面都可见 */}
       <ThemeToggle />
+      
+      {/* 添加AI助手组件，在所有页面都可见 */}
+      <AIAssistant />
     </>
   )
 }
