@@ -72,13 +72,15 @@
   // 抽屉标题样式
   .assistant-drawer-title {
     display: flex;
-    justify-content: flex-end; // 让按钮靠右
+    justify-content: space-between; // 改为两端对齐
     align-items: center;
     width: 100%;
     height: 30px; // 减小高度
     
-    .drawer-spacer {
+    .drawer-title-text {
       flex: 1;
+      display: flex;
+      align-items: center;
     }
     
     .drawer-actions {

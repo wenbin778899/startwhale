@@ -261,7 +261,11 @@ const AIAssistant = () => {
   // 极简抽屉标题组件，只保留收缩放大按钮
   const DrawerTitle = () => (
     <div className="assistant-drawer-title">
-      <div className="drawer-spacer"></div>
+      <div className="drawer-title-text">
+        <Text strong style={{ fontSize: '12px', color: '#434547' }}>
+          StratWhale问答助手
+        </Text>
+      </div>
       <div className="drawer-actions">
         <Button 
           type="text" 

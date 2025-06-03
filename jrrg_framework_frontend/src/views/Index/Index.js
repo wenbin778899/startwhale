@@ -139,7 +139,7 @@ const Index = () => {
             {/* Layout下有两个同级的子节点：Header、Layout，说明整个页面分成两块：头部和主体 */}
             <Header className="header">
                 <img className="logo" src={Logo} alt='logo无法显示' />
-                <div className="title" >NJU-jrrg-lwld小组</div>
+                <div className="title" >StratWhale智能量化平台</div>
                 {/* 如下的头像是写死的，实际上用户可以通过上传图像来自定义头像，这部分大家可以作为扩展实现 */}
                 {/* <Avatar className="avatar" size={48} src={"xxx"}></Avatar> */}
                 <Avatar className="avatar" size={48} icon={<UserOutlined />}></Avatar>

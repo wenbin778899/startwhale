@@ -28,7 +28,13 @@ import {
 
   Tooltip,
 
-  Statistic 
+  Statistic,
+
+  Modal,
+
+  Form,
+
+  Input
 
 } from 'antd';
 
@@ -58,13 +64,15 @@ import {
 
   SettingOutlined,
 
-  AuditOutlined
+  AuditOutlined,
+
+  LockOutlined
 
 } from '@ant-design/icons';
 
 import './UserProfile.scss';
 
-import { $getCurrentUserInfo } from '../../api/userApi';
+import { $getCurrentUserInfo, $changePassword, $updateUserInfo } from '../../api/userApi';
 
 import { useNavigate } from 'react-router-dom';
 
@@ -87,6 +95,18 @@ const UserProfile = () => {
   const [error, setError] = useState(null);
 
   const [activeTab, setActiveTab] = useState('basic');
+
+  const [passwordModalVisible, setPasswordModalVisible] = useState(false);
+
+  const [passwordForm] = Form.useForm();
+
+  const [passwordLoading, setPasswordLoading] = useState(false);
+
+  const [editModalVisible, setEditModalVisible] = useState(false);
+
+  const [editForm] = Form.useForm();
+
+  const [editLoading, setEditLoading] = useState(false);
 
   const navigate = useNavigate();
 
@@ -136,7 +156,19 @@ const UserProfile = () => {
 
   const handleEditProfile = () => {
 
-    message.info('编辑个人资料功能待开发');
+    setEditModalVisible(true);
+
+    // 预填充表单数据
+
+    editForm.setFieldsValue({
+
+      nickname: userInfo.nickname,
+
+      email: userInfo.email,
+
+      phone: userInfo.phone
+
+    });
 
   };
 
@@ -156,7 +188,9 @@ const UserProfile = () => {
 
   const handleChangePassword = () => {
 
-    message.info('修改密码功能待开发');
+    setPasswordModalVisible(true);
+
+    passwordForm.resetFields();
 
   };
 
@@ -167,6 +201,66 @@ const UserProfile = () => {
   const handleAvatarChange = () => {
 
     message.info('更换头像功能待开发');
+
+  };
+
+  
+
+  // 处理密码修改提交
+
+  const handlePasswordSubmit = async (values) => {
+
+    try {
+
+      setPasswordLoading(true);
+
+      await $changePassword(values.oldPassword, values.newPassword);
+      
+
+      message.success('密码修改成功');
+
+      setPasswordModalVisible(false);
+
+      passwordForm.resetFields();
+
+    } catch (error) {
+
+      console.error('密码修改错误:', error);
+      
+
+      // 显示具体的错误信息
+
+      if (error.response && error.response.data && error.response.data.message) {
+
+        message.error(error.response.data.message);
+
+      } else if (error.message) {
+
+        message.error(error.message);
+
+      } else {
+
+        message.error('密码修改失败，请重试');
+
+      }
+
+    } finally {
+
+      setPasswordLoading(false);
+
+    }
+
+  };
+
+  
+
+  // 取消密码修改
+
+  const handlePasswordCancel = () => {
+
+    setPasswordModalVisible(false);
+
+    passwordForm.resetFields();
 
   };
 
@@ -257,6 +351,73 @@ const UserProfile = () => {
       />
 
     );
+
+  };
+
+
+
+  // 处理个人资料修改提交
+
+  const handleEditSubmit = async (values) => {
+
+    try {
+
+      setEditLoading(true);
+
+      await $updateUserInfo(values);
+      
+
+      message.success('个人资料更新成功');
+
+      setEditModalVisible(false);
+
+      editForm.resetFields();
+      
+
+      // 重新获取用户信息
+
+      const response = await $getCurrentUserInfo();
+
+      setUserInfo(response.data);
+
+    } catch (error) {
+
+      console.error('更新个人资料错误:', error);
+      
+
+      // 显示具体的错误信息
+
+      if (error.response && error.response.data && error.response.data.message) {
+
+        message.error(error.response.data.message);
+
+      } else if (error.message) {
+
+        message.error(error.message);
+
+      } else {
+
+        message.error('更新个人资料失败，请重试');
+
+      }
+
+    } finally {
+
+      setEditLoading(false);
+
+    }
+
+  };
+
+  
+
+  // 取消编辑个人资料
+
+  const handleEditCancel = () => {
+
+    setEditModalVisible(false);
+
+    editForm.resetFields();
 
   };
 
@@ -464,25 +625,46 @@ const UserProfile = () => {
 
                       <div className="info-label">
 
-                        <EnvironmentOutlined /> 所在地区
+                        <CalendarOutlined /> 注册时间
 
                       </div>
 
-                      <div className="info-value">{userInfo.location || '未设置'}</div>
+                      <div className="info-value">{userInfo.registerTime || '未知'}</div>
 
                     </div>
 
+
+
+                    <Divider />
                     
 
                     <div className="info-item">
 
                       <div className="info-label">
 
-                        <CalendarOutlined /> 注册时间
+                        <SafetyCertificateOutlined /> 登录密码
 
                       </div>
 
-                      <div className="info-value">{userInfo.registerTime || '未知'}</div>
+                      <div className="info-value">
+
+                        <Button 
+
+                          type="primary" 
+
+                          size="small" 
+
+                          onClick={handleChangePassword}
+
+                          icon={<EditOutlined />}
+
+                        >
+
+                          修改密码
+
+                        </Button>
+
+                      </div>
 
                     </div>
 
@@ -494,147 +676,53 @@ const UserProfile = () => {
 
                 <Col xs={24} md={12}>
 
-                  <Row gutter={[16, 16]}>
+                  <Card 
 
-                    <Col xs={24}>
+                    title="账户安全" 
 
-                      <Card bordered={false} className="stats-card">
+                    bordered={false}
 
-                        <Row gutter={16}>
+                    className="security-card"
 
-                          <Col span={8}>
+                    extra={<Button type="link" icon={<SettingOutlined />}>安全设置</Button>}
 
-                            <Statistic 
+                  >
 
-                              title="已创建策略" 
+                    <div className="security-item">
 
-                              value={userInfo.strategies || 0} 
+                      <div className="security-label">
 
-                              valueStyle={{ color: '#1890ff' }}
+                        <PhoneOutlined /> 手机验证
 
-                            />
+                      </div>
 
-                          </Col>
+                      <div className="security-status">
 
-                          <Col span={8}>
+                        <Tag color="success">已绑定</Tag>
 
-                            <Statistic 
+                      </div>
 
-                              title="已关注股票" 
+                    </div>
 
-                              value={userInfo.watchedStocks || 0} 
+                    
 
-                              valueStyle={{ color: '#52c41a' }}
+                    <div className="security-item">
 
-                            />
+                      <div className="security-label">
 
-                          </Col>
+                        <MailOutlined /> 邮箱验证
 
-                          <Col span={8}>
+                      </div>
 
-                            <Statistic 
+                      <div className="security-status">
 
-                              title="账户安全分" 
+                        <Tag color="warning">未验证</Tag>
 
-                              value={userInfo.securityScore || 85} 
+                      </div>
 
-                              suffix="/100" 
+                    </div>
 
-                              valueStyle={{ color: '#722ed1' }}
-
-                            />
-
-                          </Col>
-
-                        </Row>
-
-                      </Card>
-
-                    </Col>
-
-                    <Col xs={24}>
-
-                      <Card 
-
-                        title="账户安全" 
-
-                        bordered={false}
-
-                        className="security-card"
-
-                        extra={<Button type="link" icon={<SettingOutlined />}>安全设置</Button>}
-
-                      >
-
-                        <div className="security-item">
-
-                          <div className="security-label">
-
-                            <SafetyCertificateOutlined /> 登录密码
-
-                          </div>
-
-                          <div className="security-actions">
-
-                            <Button 
-
-                              type="primary" 
-
-                              size="small" 
-
-                              onClick={handleChangePassword}
-
-                            >
-
-                              修改
-
-                            </Button>
-
-                          </div>
-
-                        </div>
-
-                        
-
-                        <div className="security-item">
-
-                          <div className="security-label">
-
-                            <PhoneOutlined /> 手机验证
-
-                          </div>
-
-                          <div className="security-status">
-
-                            <Tag color="success">已绑定</Tag>
-
-                          </div>
-
-                        </div>
-
-                        
-
-                        <div className="security-item">
-
-                          <div className="security-label">
-
-                            <MailOutlined /> 邮箱验证
-
-                          </div>
-
-                          <div className="security-status">
-
-                            <Tag color="warning">未验证</Tag>
-
-                          </div>
-
-                        </div>
-
-                      </Card>
-
-                    </Col>
-
-                  </Row>
+                  </Card>
 
                 </Col>
 
@@ -704,10 +792,191 @@ const UserProfile = () => {
 
       </Card>
 
+
+
+      {/* 修改密码模态框 */}
+      <Modal
+        title={
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <LockOutlined style={{ marginRight: '8px' }} />
+            修改登录密码
+          </div>
+        }
+        open={passwordModalVisible}
+        onCancel={handlePasswordCancel}
+        footer={null}
+        width={450}
+        destroyOnClose
+      >
+        <Form
+          form={passwordForm}
+          layout="vertical"
+          onFinish={handlePasswordSubmit}
+          style={{ marginTop: '20px' }}
+        >
+          <Form.Item
+            name="oldPassword"
+            label="当前密码"
+            rules={[
+              { required: true, message: '请输入当前密码' },
+              { min: 6, message: '密码长度至少6位' }
+            ]}
+          >
+            <Input.Password
+              prefix={<LockOutlined />}
+              placeholder="请输入当前密码"
+              size="large"
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="newPassword"
+            label="新密码"
+            rules={[
+              { required: true, message: '请输入新密码' },
+              { min: 6, message: '密码长度至少6位' },
+              { max: 20, message: '密码长度不能超过20位' }
+            ]}
+          >
+            <Input.Password
+              prefix={<LockOutlined />}
+              placeholder="请输入新密码"
+              size="large"
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="confirmPassword"
+            label="确认新密码"
+            dependencies={['newPassword']}
+            rules={[
+              { required: true, message: '请确认新密码' },
+              ({ getFieldValue }) => ({
+                validator(_, value) {
+                  if (!value || getFieldValue('newPassword') === value) {
+                    return Promise.resolve();
+                  }
+                  return Promise.reject(new Error('两次输入的密码不一致'));
+                },
+              }),
+            ]}
+          >
+            <Input.Password
+              prefix={<LockOutlined />}
+              placeholder="请再次输入新密码"
+              size="large"
+            />
+          </Form.Item>
+
+          <Form.Item style={{ marginBottom: 0, marginTop: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+              <Button 
+                onClick={handlePasswordCancel}
+                size="large"
+              >
+                取消
+              </Button>
+              <Button
+                type="primary"
+                htmlType="submit"
+                loading={passwordLoading}
+                size="large"
+              >
+                确认修改
+              </Button>
+            </div>
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* 编辑个人资料模态框 */}
+      <Modal
+        title={
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <EditOutlined style={{ marginRight: '8px' }} />
+            编辑个人资料
+          </div>
+        }
+        open={editModalVisible}
+        onCancel={handleEditCancel}
+        footer={null}
+        width={500}
+        destroyOnClose
+      >
+        <Form
+          form={editForm}
+          layout="vertical"
+          onFinish={handleEditSubmit}
+          style={{ marginTop: '20px' }}
+        >
+          <Form.Item
+            name="nickname"
+            label="昵称"
+            rules={[
+              { required: true, message: '请输入昵称' },
+              { max: 50, message: '昵称长度不能超过50个字符' }
+            ]}
+          >
+            <Input
+              prefix={<UserOutlined />}
+              placeholder="请输入昵称"
+              size="large"
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="email"
+            label="电子邮箱"
+            rules={[
+              { required: true, message: '请输入邮箱' },
+              { type: 'email', message: '请输入有效的邮箱地址' },
+              { max: 100, message: '邮箱长度不能超过100个字符' }
+            ]}
+          >
+            <Input
+              prefix={<MailOutlined />}
+              placeholder="请输入邮箱"
+              size="large"
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="phone"
+            label="手机号码"
+            rules={[
+              { required: true, message: '请输入手机号' },
+              { pattern: /^1[3-9]\d{9}$/, message: '请输入有效的中国大陆手机号码' }
+            ]}
+          >
+            <Input
+              prefix={<PhoneOutlined />}
+              placeholder="请输入手机号"
+              size="large"
+            />
+          </Form.Item>
+
+          <Form.Item style={{ marginBottom: 0, marginTop: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+              <Button 
+                onClick={handleEditCancel}
+                size="large"
+              >
+                取消
+              </Button>
+              <Button
+                type="primary"
+                htmlType="submit"
+                loading={editLoading}
+                size="large"
+              >
+                保存修改
+              </Button>
+            </div>
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
-
   );
-
 };
 
 

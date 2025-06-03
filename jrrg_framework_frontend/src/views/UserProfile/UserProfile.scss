@@ -200,13 +200,19 @@
 
     display: flex;
 
-    margin-bottom: 16px;
+    justify-content: space-between;
+
+    align-items: center;
+
+    padding: 12px 0;
+
+    border-bottom: 1px solid #f0f0f0;
 
     
 
     &:last-child {
 
-      margin-bottom: 0;
+      border-bottom: none;
 
     }
 
@@ -214,15 +220,15 @@
 
     .info-label {
 
-      flex: 0 0 120px;
-
-      color: #888;
-
-      font-size: 14px;
-
       display: flex;
 
       align-items: center;
+
+      font-weight: 500;
+
+      color: #666;
+
+      min-width: 120px;
 
       
 
@@ -242,7 +248,17 @@
 
       flex: 1;
 
-      font-weight: 500;
+      text-align: right;
+
+      color: #262626;
+
+      
+
+      .ant-btn {
+
+        margin-left: 8px;
+
+      }
 
     }
 

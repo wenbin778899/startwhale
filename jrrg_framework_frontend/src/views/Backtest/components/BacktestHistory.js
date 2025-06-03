@@ -367,7 +367,7 @@ const BacktestHistory = ({ onViewDetail, onDelete }) => {
                       )}
                     </div>
                     
-                    <Divider style={{ margin: '12px 0' }} />
+                    <Divider style={{ margin: '8px 0' }} />
                     
                     <div className="history-item-actions">
                       <Button

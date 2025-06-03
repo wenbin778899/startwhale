@@ -1,12 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { Input, Button, Table, Card, message, Select, Spin, Tabs, Alert, Space, Typography, AutoComplete, Descriptions, Divider, List, InputNumber } from 'antd';
-import { SearchOutlined, InfoCircleOutlined, LinkOutlined, ReloadOutlined } from '@ant-design/icons';
+import { 
+  Input, Button, Table, Card, message, Select, Spin, Tabs, Alert, 
+  Space, Typography, AutoComplete, Descriptions, Divider, List, 
+  InputNumber, Row, Col, Statistic, Progress, Badge, Tag, Avatar
+} from 'antd';
+import { 
+  SearchOutlined, InfoCircleOutlined, LinkOutlined, ReloadOutlined,
+  RiseOutlined, TrendingDownOutlined, DollarOutlined,
+  LineChartOutlined, BarChartOutlined, StockOutlined, NotificationOutlined,
+  FallOutlined, SwapOutlined
+} from '@ant-design/icons';
 import { searchStock, getStockInfo, getStockBasicInfo, getStockNews } from '../../api/stock';
 import ReactECharts from 'echarts-for-react';
+import './StockQuery.css';
 
 const { Option } = Select;
 const { TabPane } = Tabs;
-const { Text, Link } = Typography;
+const { Text, Link, Title } = Typography;
 
 const StockQuery = () => {
   const [keyword, setKeyword] = useState('');
@@ -705,238 +715,413 @@ const StockQuery = () => {
     );
   };
 
-  // 渲染基本信息卡片
-  const renderBasicInfoCard = () => {
-    if (!stockData) return null;
-    
-    // 从stockData中获取基本信息
-    const stockName = stockData.name || '未知';
-    const stockCode = stockData.symbol || '未知';
-    
-    // 获取最新的股票价格信息（如果有历史数据）
-    let latestPrice = null;
-    let priceChange = null;
-    let priceChangePercent = null;
-    
-    if (stockData.history && stockData.history.length > 0) {
-      const latestData = stockData.history[0]; // 假设历史数据是按日期降序排列的
-      latestPrice = latestData['收盘'];
-      priceChange = latestData['涨跌额'];
-      priceChangePercent = latestData['涨跌幅'];
-    }
-    
-    // 确定价格变化的颜色
-    const priceColor = priceChange > 0 ? '#f5222d' : priceChange < 0 ? '#52c41a' : 'inherit';
-    
+  // 完整的搜索框组件
+  const renderSearchBox = () => {
     return (
-      <Card 
-        size="small" 
-        title={<span>股票基本信息 <Text type="secondary" style={{ fontSize: '12px' }}>(点击股票代码可直接查询)</Text></span>}
-        style={{ marginBottom: '20px' }}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <Text strong style={{ fontSize: '18px', marginRight: '10px' }}>{stockName}</Text>
-            <Button 
-              type="link" 
-              style={{ padding: '0', fontSize: '16px' }}
-              onClick={() => {
-                setKeyword(stockCode);
-                handleQuery(stockCode);
-              }}
+      <div className="integrated-search-container">
+        <div className="search-box-wrapper">
+          <div className="search-input-section">
+            <SearchOutlined className="search-icon" />
+            <AutoComplete
+              className="search-autocomplete"
+              options={autoCompleteOptions}
+              onSelect={handleAutoCompleteSelect}
+              onSearch={handleInputChange}
+              value={keyword}
+              filterOption={false}
+              defaultActiveFirstOption={false}
+              dropdownClassName="search-dropdown"
             >
-              {stockCode}
-            </Button>
+              <Input
+                className="search-input"
+                onPressEnter={handleSearch}
+                allowClear
+                bordered={false}
+              />
+            </AutoComplete>
           </div>
-          
-          {latestPrice && (
-            <div style={{ textAlign: 'right' }}>
-              <Text strong style={{ fontSize: '18px', color: priceColor, display: 'block' }}>
-                {latestPrice}
-              </Text>
-              <Space>
-                <Text style={{ color: priceColor }}>{priceChange > 0 ? '+' : ''}{priceChange}</Text>
-                <Text style={{ color: priceColor }}>({priceChangePercent}%)</Text>
-              </Space>
-            </div>
-          )}
-        </div>
-        
-        {stockBasicInfo && stockBasicInfo.industry && stockBasicInfo.industry['所属行业'] && (
-          <div style={{ marginTop: '10px' }}>
-            <Text type="secondary">所属行业: {stockBasicInfo.industry['所属行业']}</Text>
-          </div>
-        )}
-        
-        <div style={{ marginTop: '10px', display: 'flex', justifyContent: 'space-between' }}>
-          <Button 
-            type="primary" 
-            size="small"
-            onClick={() => handleQuery(stockCode)}
+          <Button
+            type="primary"
+            className="search-submit-btn"
+            onClick={handleSearch}
+            loading={searchLoading}
+            icon={<SearchOutlined />}
           >
-            刷新数据
+            搜索
           </Button>
-          
-          <Space>
-            <Text type="secondary">数据更新时间: {stockData.history && stockData.history.length > 0 ? stockData.history[0]['日期'] : '未知'}</Text>
-          </Space>
         </div>
-      </Card>
+      </div>
     );
   };
 
   return (
-    <div style={{ padding: '20px' }}>
-      <Card title="股票信息查询" bordered={false}>
-        <Alert
-          message="使用说明"
-          description={
-            <div>
-              <p>1. 输入股票代码进行搜索，例如：000001（平安银行）</p>
-              <p>2. 选择时间范围（默认30天）</p>
-              <p>3. 在搜索结果中点击查询按钮获取详细信息</p>
-              <p>4. 在基本资料中点击股票代码可以直接查询该股票</p>
-            </div>
-          }
-          type="info"
-          showIcon
-          style={{ marginBottom: '20px' }}
-        />
-
-        <div style={{ marginBottom: '20px', display: 'flex', gap: '10px' }}>
-          <AutoComplete
-            style={{ width: '300px' }}
-            options={autoCompleteOptions}
-            onSelect={handleAutoCompleteSelect}
-            onSearch={handleInputChange}
-            value={keyword}
-            //notFoundContent={autoCompleteLoading ? <Spin size="small" /> : "   "}
-            //placeholder="请输入股票代码"
-            filterOption={false}
-            defaultActiveFirstOption={false}
-          >
-            <Input 
-              placeholder="请输入股票代码"
-              prefix={<SearchOutlined />}
-              onPressEnter={handleSearch}
-              allowClear
-            />
-          </AutoComplete>
-          <Button 
-            type="primary" 
-            onClick={handleSearch} 
-            loading={searchLoading}
-          >
-            搜索
-          </Button>
-          <Select
-            style={{ width: '120px' }}
-            value={days}
-            onChange={(value) => setDays(value)}
-          >
-            <Option value={7}>最近7天</Option>
-            <Option value={30}>最近30天</Option>
-            <Option value={90}>最近90天</Option>
-            <Option value={180}>最近180天</Option>
-            <Option value={365}>最近一年</Option>
-          </Select>
+    <div className="modern-stock-container">
+      {/* 顶部搜索区域 */}
+      <div className="stock-search-header">
+        <div className="search-header-background">
+          <Row gutter={[24, 24]} align="middle">
+            <Col xs={24} lg={16}>
+              <div className="search-section">
+                <Title level={2} className="search-title">
+                  <StockOutlined className="title-icon" />
+                  股票行情分析
+                </Title>
+                
+                <Space.Compact size="large" className="search-input-group">
+                  {renderSearchBox()}
+                </Space.Compact>
+              </div>
+            </Col>
+            
+            <Col xs={24} lg={8}>
+              <div className="quick-stocks">
+                <div className="control-section">
+                  <Text className="quick-title">查询设置</Text>
+                  <div style={{ marginBottom: '16px' }}>
+                    <Text style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: '14px', marginRight: '8px' }}>时间范围:</Text>
+                    <Select
+                      size="middle"
+                      value={days}
+                      onChange={(value) => setDays(value)}
+                      className="time-selector-separate"
+                      style={{ minWidth: '100px' }}
+                    >
+                      <Option value={7}>7天</Option>
+                      <Option value={30}>30天</Option>
+                      <Option value={90}>90天</Option>
+                      <Option value={180}>180天</Option>
+                      <Option value={365}>一年</Option>
+                    </Select>
+                  </div>
+                </div>
+                
+                <Text className="quick-title">热门股票</Text>
+                <div className="stock-tags">
+                  {exampleStocks.map(stock => (
+                    <Tag 
+                      key={stock.code} 
+                      className="stock-tag"
+                      onClick={() => handleExampleClick(stock)}
+                      icon={<RiseOutlined />}
+                    >
+                      {stock.name}
+                    </Tag>
+                  ))}
+                </div>
+              </div>
+            </Col>
+          </Row>
+        </div>
         </div>
 
-        <div style={{ marginBottom: '20px' }}>
-          <Text type="secondary">示例股票：</Text>
-          <Space>
-            {exampleStocks.map(stock => (
-              <Button 
-                key={stock.code} 
-                type="link" 
-                onClick={() => handleExampleClick(stock)}
-              >
-                {stock.name}({stock.code})
-              </Button>
-            ))}
-          </Space>
-        </div>
-
+      {/* 错误提示 */}
         {errorMessage && (
           <Alert
-            message="错误"
+          message="查询失败"
             description={errorMessage}
             type="error"
             showIcon
-            style={{ marginBottom: '20px' }}
-          />
-        )}
+          closable
+          className="error-alert"
+        />
+      )}
 
-        {stockData && renderBasicInfoCard()}
+      {/* 股票基本信息概览 */}
+      {stockData && (
+        <div className="stock-overview-section">
+          <Card className="stock-overview-card" bordered={false}>
+            <Row gutter={[24, 16]} align="middle">
+              <Col xs={24} md={12} lg={8}>
+                <div className="stock-info-main">
+                  <div className="stock-name-section">
+                    <Avatar 
+                      size={48} 
+                      className="stock-avatar"
+                      style={{ backgroundColor: '#1890ff' }}
+                    >
+                      {stockData.name ? stockData.name.charAt(0) : 'S'}
+                    </Avatar>
+                    <div className="stock-name-details">
+                      <Title level={3} className="stock-name">
+                        {stockData.name || '未知股票'}
+                      </Title>
+                      <Text className="stock-code">{stockData.symbol}</Text>
+                    </div>
+                  </div>
+                </div>
+              </Col>
+              
+              <Col xs={24} md={12} lg={16}>
+                {stockData.history && stockData.history.length > 0 && (
+                  <div className="stock-price-section">
+                    <Row gutter={[16, 8]}>
+                      <Col xs={12} sm={6}>
+                        <Statistic 
+                          title="最新价格" 
+                          value={stockData.history[0]['收盘']} 
+                          precision={2}
+                          valueStyle={{ 
+                            color: stockData.history[0]['涨跌额'] >= 0 ? '#f5222d' : '#52c41a',
+                            fontSize: '24px',
+                            fontWeight: 'bold'
+                          }}
+                          prefix={<DollarOutlined />}
+                        />
+                      </Col>
+                      <Col xs={12} sm={6}>
+                        <Statistic 
+                          title="涨跌额" 
+                          value={stockData.history[0]['涨跌额']} 
+                          precision={2}
+                          valueStyle={{ 
+                            color: stockData.history[0]['涨跌额'] >= 0 ? '#f5222d' : '#52c41a' 
+                          }}
+                          prefix={stockData.history[0]['涨跌额'] >= 0 ? <RiseOutlined /> : <FallOutlined />}
+                        />
+                      </Col>
+                      <Col xs={12} sm={6}>
+                        <Statistic 
+                          title="涨跌幅" 
+                          value={stockData.history[0]['涨跌幅']} 
+                          precision={2}
+                          suffix="%"
+                          valueStyle={{ 
+                            color: stockData.history[0]['涨跌幅'] >= 0 ? '#f5222d' : '#52c41a' 
+                          }}
+                        />
+                      </Col>
+                      <Col xs={12} sm={6}>
+                        <Statistic 
+                          title="成交量" 
+                          value={stockData.history[0]['成交量']} 
+                          formatter={(value) => `${(value / 10000).toFixed(2)}万`}
+                          valueStyle={{ color: '#1890ff' }}
+                          prefix={<BarChartOutlined />}
+                        />
+                      </Col>
+                    </Row>
+                  </div>
+                )}
+              </Col>
+            </Row>
+            
+            <Divider style={{ margin: '16px 0' }} />
+            
+            <Row gutter={16}>
+              <Col span={8}>
+                <Button 
+                  type="primary" 
+                  icon={<ReloadOutlined />}
+                  onClick={() => handleQuery(stockData.symbol)}
+                  className="action-button"
+                >
+                  刷新数据
+                </Button>
+              </Col>
+              <Col span={16}>
+                <Text type="secondary" className="update-time">
+                  数据更新时间: {stockData.history && stockData.history.length > 0 ? stockData.history[0]['日期'] : '未知'}
+                </Text>
+              </Col>
+            </Row>
+          </Card>
+        </div>
+      )}
 
+      {/* 搜索结果表格 */}
         {searchResults.length > 0 && (
-          <div style={{ marginBottom: '20px' }}>
-            <h3>搜索结果</h3>
+        <Card 
+          title={
+            <Space>
+              <SearchOutlined />
+              搜索结果 ({searchResults.length}个)
+            </Space>
+          }
+          className="search-results-card"
+        >
             <Table
               dataSource={searchResults}
               columns={searchColumns}
               rowKey="代码"
-              size="small"
+            size="middle"
               pagination={false}
+            className="search-results-table"
             />
-          </div>
+        </Card>
         )}
 
-        {loading ? (
-          <div style={{ textAlign: 'center', padding: '50px' }}>
+      {/* 加载状态 */}
+      {loading && (
+        <div className="loading-section">
             <Spin size="large" />
+          <Text className="loading-text">正在加载股票数据...</Text>
           </div>
-        ) : stockData && (
-          <div>
-            <h2>{stockData.name} ({stockData.symbol})</h2>
-            
-            <Tabs defaultActiveKey="chart" style={{ marginBottom: '20px' }}>
-              <TabPane tab="K线图" key="chart">
-                <div style={{ height: '400px', marginBottom: '20px' }}>
-                  <ReactECharts option={getKLineOption()} style={{ height: '100%' }} />
+      )}
+
+      {/* 主要图表和数据区域 */}
+      {stockData && !loading && (
+        <div className="stock-data-section">
+          <Tabs 
+            defaultActiveKey="chart" 
+            className="stock-data-tabs"
+            size="large"
+            items={[
+              {
+                key: 'chart',
+                label: (
+                  <Space>
+                    <LineChartOutlined />
+                    K线图
+                  </Space>
+                ),
+                children: (
+                  <Card className="chart-card" bordered={false}>
+                    <div className="chart-container">
+                      <ReactECharts 
+                        option={getKLineOption()} 
+                        style={{ height: '500px', width: '100%' }} 
+                        className="stock-chart"
+                      />
                 </div>
-              </TabPane>
-              <TabPane tab="成交量" key="volume">
-                <div style={{ height: '400px', marginBottom: '20px' }}>
-                  <ReactECharts option={getVolumeOption()} style={{ height: '100%' }} />
+                  </Card>
+                )
+              },
+              {
+                key: 'volume',
+                label: (
+                  <Space>
+                    <BarChartOutlined />
+                    成交量
+                  </Space>
+                ),
+                children: (
+                  <Card className="chart-card" bordered={false}>
+                    <div className="chart-container">
+                      <ReactECharts 
+                        option={getVolumeOption()} 
+                        style={{ height: '500px', width: '100%' }} 
+                        className="stock-chart"
+                      />
                 </div>
-              </TabPane>
-              <TabPane tab="涨跌幅" key="change">
-                <div style={{ height: '400px', marginBottom: '20px' }}>
-                  <ReactECharts option={getPriceChangeOption()} style={{ height: '100%' }} />
+                  </Card>
+                )
+              },
+              {
+                key: 'change',
+                label: (
+                  <Space>
+                    <SwapOutlined />
+                    涨跌幅
+                  </Space>
+                ),
+                children: (
+                  <Card className="chart-card" bordered={false}>
+                    <div className="chart-container">
+                      <ReactECharts 
+                        option={getPriceChangeOption()} 
+                        style={{ height: '500px', width: '100%' }} 
+                        className="stock-chart"
+                      />
                 </div>
-              </TabPane>
-              <TabPane tab="数据表" key="table">
+                  </Card>
+                )
+              },
+              {
+                key: 'table',
+                label: (
+                  <Space>
+                    <InfoCircleOutlined />
+                    数据表
+                  </Space>
+                ),
+                children: (
+                  <Card className="data-table-card" bordered={false}>
                 <Table
                   dataSource={stockData.history}
                   columns={columns}
                   rowKey="日期"
-                  pagination={{ pageSize: 10 }}
+                      pagination={{ 
+                        pageSize: 15,
+                        showSizeChanger: true,
+                        showQuickJumper: true,
+                        showTotal: (total) => `共 ${total} 条记录`
+                      }}
                   scroll={{ x: 'max-content' }}
-                />
-              </TabPane>
-              <TabPane tab="基本资料" key="basic">
+                      className="stock-data-table"
+                    />
+                  </Card>
+                )
+              },
+              {
+                key: 'basic',
+                label: (
+                  <Space>
+                    <InfoCircleOutlined />
+                    基本资料
+                  </Space>
+                ),
+                children: (
+                  <Card className="basic-info-card" bordered={false}>
                 {basicInfoLoading ? (
-                  <div style={{ textAlign: 'center', padding: '50px' }}>
+                      <div className="loading-section">
                     <Spin size="large" />
+                        <Text className="loading-text">正在加载基本资料...</Text>
                   </div>
                 ) : (
-                  renderBasicInfo()
-                )}
-              </TabPane>
-              <TabPane tab="相关新闻" key="news">
+                      <div className="basic-info-content">
+                        {renderBasicInfo()}
+                      </div>
+                    )}
+                  </Card>
+                )
+              },
+              {
+                key: 'news',
+                label: (
+                  <Space>
+                    <NotificationOutlined />
+                    相关新闻
+                    <Badge count={stockNews.length} size="small" />
+                  </Space>
+                ),
+                children: (
+                  <Card className="news-card" bordered={false}>
+                    <div className="news-header">
+                      <Title level={4}>
+                        <NotificationOutlined /> 相关新闻
+                      </Title>
+                      <Space>
+                        <Text>显示条数：</Text>
+                        <Select
+                          size="small"
+                          value={newsLimit}
+                          onChange={handleNewsLimitChange}
+                          style={{ width: 80 }}
+                        >
+                          <Option value={5}>5条</Option>
+                          <Option value={10}>10条</Option>
+                          <Option value={20}>20条</Option>
+                          <Option value={50}>50条</Option>
+                        </Select>
+                      </Space>
+                    </div>
                 {newsLoading ? (
-                  <div style={{ textAlign: 'center', padding: '50px' }}>
+                      <div className="loading-section">
                     <Spin size="large" />
+                        <Text className="loading-text">正在加载新闻数据...</Text>
                   </div>
                 ) : (
-                  renderStockNews()
-                )}
-              </TabPane>
-            </Tabs>
+                      <div className="news-content">
+                        {renderStockNews()}
           </div>
         )}
       </Card>
+                )
+              }
+            ]}
+          />
+        </div>
+      )}
     </div>
   );
 };

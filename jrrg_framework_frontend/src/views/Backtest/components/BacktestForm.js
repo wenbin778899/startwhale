@@ -267,7 +267,7 @@ const BacktestForm = ({ favoriteStocks, onBacktestComplete }) => {
         description="策略回测使用历史行情数据模拟交易策略的执行过程，帮助评估策略的有效性。请注意，历史业绩不代表未来表现，回测结果仅供参考。"
         type="info"
         showIcon
-        style={{ marginBottom: '20px' }}
+        style={{ marginBottom: '12px' }}
       />
       
       <Form
@@ -276,17 +276,19 @@ const BacktestForm = ({ favoriteStocks, onBacktestComplete }) => {
         onFinish={handleSubmit}
         requiredMark="optional"
         className="backtest-form-container"
+        size="small"
       >
         <div className="strategy-select-container">
           <Card
             title={
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <RocketOutlined style={{ marginRight: 8, color: '#1890ff' }} />
+              <div style={{ display: 'flex', alignItems: 'center', fontSize: '14px' }}>
+                <RocketOutlined style={{ marginRight: 6, color: '#1890ff' }} />
                 <span>选择回测策略</span>
               </div>
             }
             bordered={false}
             className="form-card"
+            size="small"
           >
             <Form.Item
               name="strategy_name"
@@ -318,13 +320,14 @@ const BacktestForm = ({ favoriteStocks, onBacktestComplete }) => {
         
         <Card
           title={
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <StockOutlined style={{ marginRight: 8, color: '#1890ff' }} />
+            <div style={{ display: 'flex', alignItems: 'center', fontSize: '14px' }}>
+              <StockOutlined style={{ marginRight: 6, color: '#1890ff' }} />
               <span>选择股票和时间范围</span>
             </div>
           }
           bordered={false}
           className="form-card"
+          size="small"
         >
           <Form.Item
             name="stock_code"
@@ -378,13 +381,14 @@ const BacktestForm = ({ favoriteStocks, onBacktestComplete }) => {
         
         <Card
           title={
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <MoneyCollectOutlined style={{ marginRight: 8, color: '#1890ff' }} />
+            <div style={{ display: 'flex', alignItems: 'center', fontSize: '14px' }}>
+              <MoneyCollectOutlined style={{ marginRight: 6, color: '#1890ff' }} />
               <span>回测资金设置</span>
             </div>
           }
           bordered={false}
           className="form-card"
+          size="small"
         >
           <div className="date-range-selector">
             <Form.Item
@@ -434,13 +438,14 @@ const BacktestForm = ({ favoriteStocks, onBacktestComplete }) => {
         {selectedStrategy && selectedStrategy.params && (
           <Card
             title={
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <SettingOutlined style={{ marginRight: 8, color: '#1890ff' }} />
+              <div style={{ display: 'flex', alignItems: 'center', fontSize: '14px' }}>
+                <SettingOutlined style={{ marginRight: 6, color: '#1890ff' }} />
                 <span>策略参数设置</span>
               </div>
             }
             bordered={false}
             className="strategy-params-form"
+            size="small"
           >
             <div className="strategy-params-content">
               {selectedStrategy.params.map(param => (

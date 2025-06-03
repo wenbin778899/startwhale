@@ -8,7 +8,7 @@ const NotFound = () => {
             <h1 style={styles.title}>404 - 页面未找到</h1>
             <p style={styles.text}>抱歉，您访问的页面不存在。</p>
             {/* 你可以将如下的内容替换为你们自己的项目名称 */}
-            <p style={styles.projectName}>NJU-jrrg-lwld小组</p>
+            <p style={styles.projectName}>StratWhale智能量化平台</p>
             <Link to="/" style={styles.link}>返回首页</Link>
         </div>
     );

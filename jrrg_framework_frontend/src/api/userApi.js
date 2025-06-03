@@ -71,4 +71,28 @@ export const $getUserInfoById = async (userId) => {
     return res;
 }
 
+/**
+ * 修改用户密码
+ * @param {string} oldPassword 当前密码
+ * @param {string} newPassword 新密码
+ * @returns {Promise<Object>} 修改结果
+ */
+export const $changePassword = async (oldPassword, newPassword) => {
+    const res = await http.post("/api/user/change-password", {
+        oldPassword,
+        newPassword
+    });
+    return res;
+}
+
+/**
+ * 更新用户信息
+ * @param {object} userInfo 用户信息对象
+ * @returns {Promise<Object>} 更新结果
+ */
+export const $updateUserInfo = async (userInfo) => {
+    const res = await http.put("/api/user/info", userInfo);
+    return res;
+}
+
 

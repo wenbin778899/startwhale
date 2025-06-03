@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Row, Col, Empty, Radio, Statistic, Progress, Tag, Space, Tooltip, Switch } from 'antd';
+import { Card, Row, Col, Empty, Radio, Statistic, Progress, Tag, Space, Tooltip, Switch, Table, Typography, Divider } from 'antd';
 import ReactECharts from 'echarts-for-react';
 import { 
   PieChartOutlined, 
@@ -15,9 +15,17 @@ import {
   FundOutlined,
   ThunderboltOutlined,
   AimOutlined,
-  BankOutlined
+  BankOutlined,
+  StarOutlined,
+  FireOutlined,
+  DashboardOutlined,
+  PercentageOutlined,
+  CalendarOutlined,
+  CrownOutlined
 } from '@ant-design/icons';
 import moment from 'moment';
+
+const { Text } = Typography;
 
 const PortfolioAnalysis = ({ portfolioDetail = {} }) => {
   const [analysisType, setAnalysisType] = useState('asset');
@@ -43,6 +51,57 @@ const PortfolioAnalysis = ({ portfolioDetail = {} }) => {
   const totalInvestment = Number(portfolio.total_investment || 0);
   const totalProfit = Number(portfolio.profit_loss || 0);
   const totalProfitRate = Number(portfolio.profit_loss_rate || 0);
+
+  // 计算绩效指标
+  const calculatePerformanceMetrics = () => {
+    // 基础指标
+    const metrics = {
+      totalReturn: totalProfitRate,
+      absoluteReturn: totalProfit,
+      
+      // 年化收益率（假设持仓时间1年）
+      annualizedReturn: totalProfitRate,
+      
+      // 最大回撤（模拟数据）
+      maxDrawdown: Math.min(0, totalProfitRate * 1.2),
+      
+      // 夏普比率（简化计算，假设无风险利率3%）
+      sharpeRatio: totalProfitRate > 0 ? (totalProfitRate - 0.03) / Math.max(0.05, Math.abs(totalProfitRate * 0.8)) : 0,
+      
+      // 波动率（基于收益率估算）
+      volatility: Math.abs(totalProfitRate) * 0.8 + 0.1,
+      
+      // 信息比率
+      informationRatio: totalProfitRate / Math.max(0.05, Math.abs(totalProfitRate * 0.6)),
+      
+      // 胜率（基于持仓盈利股票/基金比例）
+      winRate: totalAssets > 0 ? 
+        ([...stocks, ...funds].filter(item => Number(item.profit_loss_rate || 0) > 0).length / totalAssets) : 0,
+      
+      // 盈亏比
+      profitLossRatio: (() => {
+        const profits = [...stocks, ...funds].filter(item => Number(item.profit_loss_rate || 0) > 0);
+        const losses = [...stocks, ...funds].filter(item => Number(item.profit_loss_rate || 0) < 0);
+        
+        if (profits.length === 0 || losses.length === 0) return totalProfitRate > 0 ? 2.0 : 0.5;
+        
+        const avgProfit = profits.reduce((sum, item) => sum + Number(item.profit_loss_rate || 0), 0) / profits.length;
+        const avgLoss = Math.abs(losses.reduce((sum, item) => sum + Number(item.profit_loss_rate || 0), 0) / losses.length);
+        
+        return avgLoss > 0 ? avgProfit / avgLoss : 2.0;
+      })(),
+      
+      // 资产相关性（简化）
+      correlation: 0.65,
+      
+      // Beta系数（相对市场，模拟数据）
+      beta: 1.0 + (totalProfitRate - 0.08) * 0.5
+    };
+
+    return metrics;
+  };
+
+  const performanceMetrics = calculatePerformanceMetrics();
 
   // 获取主题配置
   const getTheme = () => ({
@@ -794,6 +853,424 @@ const PortfolioAnalysis = ({ portfolioDetail = {} }) => {
     };
   };
 
+  // 绩效雷达图
+  const getPerformanceRadarOption = () => {
+    const indicators = [
+      { name: '收益能力', max: 1 },
+      { name: '风险控制', max: 1 },
+      { name: '稳定性', max: 1 },
+      { name: '选股能力', max: 1 },
+      { name: '资产配置', max: 1 },
+      { name: '市场适应', max: 1 }
+    ];
+
+    // 计算各维度得分（0-1）
+    const score = {
+      profitability: Math.max(0, Math.min(1, (performanceMetrics.annualizedReturn + 0.2) / 0.4)),
+      riskControl: Math.max(0, Math.min(1, (0.3 - performanceMetrics.volatility) / 0.3)),
+      stability: Math.max(0, Math.min(1, performanceMetrics.sharpeRatio / 2)),
+      selectivity: Math.max(0, Math.min(1, performanceMetrics.winRate)),
+      allocation: Math.max(0, Math.min(1, Math.min(stockCount, fundCount) / Math.max(stockCount, fundCount, 1))),
+      adaptation: Math.max(0, Math.min(1, (performanceMetrics.beta - 0.5) / 1.0))
+    };
+
+    return {
+      ...getTheme(),
+      title: {
+        text: '投资能力雷达图',
+        left: 'center',
+        textStyle: { color: isDarkMode ? '#ffffff' : '#333333' }
+      },
+      tooltip: {
+        trigger: 'item'
+      },
+      radar: {
+        indicator: indicators,
+        shape: 'circle',
+        splitNumber: 5,
+        axisName: {
+          color: isDarkMode ? '#ffffff' : '#333333'
+        },
+        splitLine: {
+          lineStyle: {
+            color: isDarkMode ? '#555' : '#ddd'
+          }
+        },
+        splitArea: {
+          show: true,
+          areaStyle: {
+            color: isDarkMode ? ['rgba(255,255,255,0.05)', 'rgba(255,255,255,0.1)'] : ['rgba(0,0,0,0.05)', 'rgba(0,0,0,0.1)']
+          }
+        }
+      },
+      series: [{
+        name: '投资能力',
+        type: 'radar',
+        data: [{
+          value: [
+            score.profitability,
+            score.riskControl,
+            score.stability,
+            score.selectivity,
+            score.allocation,
+            score.adaptation
+          ],
+          name: '当前组合',
+          areaStyle: {
+            color: 'rgba(24, 144, 255, 0.3)'
+          },
+          lineStyle: {
+            color: '#1890ff',
+            width: 2
+          },
+          itemStyle: {
+            color: '#1890ff'
+          }
+        }]
+      }]
+    };
+  };
+
+  // 绩效对比柱状图
+  const getPerformanceComparisonOption = () => {
+    const benchmarkData = {
+      '沪深300': 0.08,
+      '创业板指': 0.12,
+      '同类平均': 0.06,
+      '当前组合': performanceMetrics.annualizedReturn
+    };
+
+    const categories = Object.keys(benchmarkData);
+    const values = Object.values(benchmarkData);
+
+    return {
+      ...getTheme(),
+      title: {
+        text: '收益率对比',
+        left: 'center',
+        textStyle: { color: isDarkMode ? '#ffffff' : '#333333' }
+      },
+      tooltip: {
+        trigger: 'axis',
+        formatter: function(params) {
+          const param = params[0];
+          return `${param.name}<br/>年化收益率: ${(param.value * 100).toFixed(2)}%`;
+        }
+      },
+      xAxis: {
+        type: 'category',
+        data: categories,
+        axisLabel: {
+          color: isDarkMode ? '#ffffff' : '#333333'
+        }
+      },
+      yAxis: {
+        type: 'value',
+        name: '收益率',
+        axisLabel: {
+          formatter: '{value}%',
+          color: isDarkMode ? '#ffffff' : '#333333'
+        },
+        nameTextStyle: {
+          color: isDarkMode ? '#ffffff' : '#333333'
+        }
+      },
+      series: [{
+        data: values.map((value, index) => ({
+          value: value * 100,
+          itemStyle: {
+            color: index === 3 ? '#1890ff' : (value > benchmarkData['当前组合'] ? '#52c41a' : '#ff4d4f')
+          }
+        })),
+        type: 'bar',
+        barWidth: '60%'
+      }]
+    };
+  };
+
+  // 风险指标表格数据
+  const getRiskMetricsTableData = () => {
+    return [
+      {
+        key: '1',
+        metric: '年化收益率',
+        value: `${(performanceMetrics.annualizedReturn * 100).toFixed(2)}%`,
+        benchmark: '8.00%',
+        rank: performanceMetrics.annualizedReturn > 0.08 ? '超越基准' : '低于基准',
+        color: performanceMetrics.annualizedReturn > 0.08 ? '#52c41a' : '#ff4d4f'
+      },
+      {
+        key: '2',
+        metric: '最大回撤',
+        value: `${(performanceMetrics.maxDrawdown * 100).toFixed(2)}%`,
+        benchmark: '-15.00%',
+        rank: performanceMetrics.maxDrawdown > -0.15 ? '风险较低' : '风险较高',
+        color: performanceMetrics.maxDrawdown > -0.15 ? '#52c41a' : '#ff4d4f'
+      },
+      {
+        key: '3',
+        metric: '夏普比率',
+        value: performanceMetrics.sharpeRatio.toFixed(2),
+        benchmark: '1.00',
+        rank: performanceMetrics.sharpeRatio > 1 ? '表现优秀' : '有待提升',
+        color: performanceMetrics.sharpeRatio > 1 ? '#52c41a' : '#ff4d4f'
+      },
+      {
+        key: '4',
+        metric: '波动率',
+        value: `${(performanceMetrics.volatility * 100).toFixed(2)}%`,
+        benchmark: '20.00%',
+        rank: performanceMetrics.volatility < 0.20 ? '波动较小' : '波动较大',
+        color: performanceMetrics.volatility < 0.20 ? '#52c41a' : '#ff4d4f'
+      },
+      {
+        key: '5',
+        metric: '胜率',
+        value: `${(performanceMetrics.winRate * 100).toFixed(2)}%`,
+        benchmark: '50.00%',
+        rank: performanceMetrics.winRate > 0.5 ? '选股较好' : '选股一般',
+        color: performanceMetrics.winRate > 0.5 ? '#52c41a' : '#ff4d4f'
+      },
+      {
+        key: '6',
+        metric: '盈亏比',
+        value: performanceMetrics.profitLossRatio.toFixed(2),
+        benchmark: '2.00',
+        rank: performanceMetrics.profitLossRatio > 2 ? '盈利能力强' : '盈利能力弱',
+        color: performanceMetrics.profitLossRatio > 2 ? '#52c41a' : '#ff4d4f'
+      }
+    ];
+  };
+
+  const riskMetricsColumns = [
+    {
+      title: '指标名称',
+      dataIndex: 'metric',
+      key: 'metric',
+      width: '25%'
+    },
+    {
+      title: '当前值',
+      dataIndex: 'value',
+      key: 'value',
+      width: '20%',
+      render: (text, record) => (
+        <Text style={{ color: record.color, fontWeight: 'bold' }}>{text}</Text>
+      )
+    },
+    {
+      title: '市场基准',
+      dataIndex: 'benchmark',
+      key: 'benchmark',
+      width: '20%'
+    },
+    {
+      title: '评价',
+      dataIndex: 'rank',
+      key: 'rank',
+      width: '35%',
+      render: (text, record) => (
+        <Tag color={record.color === '#52c41a' ? 'success' : 'error'}>
+          {text}
+        </Tag>
+      )
+    }
+  ];
+
+  // 渲染绩效指标概览卡片
+  const renderPerformanceOverview = () => {
+    return (
+      <Card style={{ marginBottom: 24 }}>
+        <Row gutter={[24, 16]}>
+          <Col xs={24}>
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: 16 }}>
+              <TrophyOutlined style={{ fontSize: 20, color: '#1890ff', marginRight: 8 }} />
+              <Text style={{ fontSize: 18, fontWeight: 'bold' }}>绩效指标概览</Text>
+            </div>
+          </Col>
+        </Row>
+        
+        <Row gutter={[24, 24]}>
+          <Col xs={12} sm={8} md={6}>
+            <Card size="small" style={{ textAlign: 'center', background: '#f6ffed' }}>
+              <Statistic
+                title="年化收益率"
+                value={performanceMetrics.annualizedReturn * 100}
+                precision={2}
+                suffix="%"
+                prefix={<RiseOutlined />}
+                valueStyle={{ 
+                  color: performanceMetrics.annualizedReturn >= 0 ? '#cf1322' : '#3f8600',
+                  fontSize: '18px'
+                }}
+              />
+              <div style={{ marginTop: 8 }}>
+                <Tag color={performanceMetrics.annualizedReturn > 0.08 ? 'success' : 'warning'}>
+                  {performanceMetrics.annualizedReturn > 0.08 ? '超越基准' : '低于基准'}
+                </Tag>
+              </div>
+            </Card>
+          </Col>
+          
+          <Col xs={12} sm={8} md={6}>
+            <Card size="small" style={{ textAlign: 'center', background: '#f0f9ff' }}>
+              <Statistic
+                title="夏普比率"
+                value={performanceMetrics.sharpeRatio}
+                precision={2}
+                prefix={<StarOutlined />}
+                valueStyle={{ 
+                  color: performanceMetrics.sharpeRatio >= 1 ? '#1890ff' : '#8c8c8c',
+                  fontSize: '18px'
+                }}
+              />
+              <div style={{ marginTop: 8 }}>
+                <Tag color={performanceMetrics.sharpeRatio > 1 ? 'blue' : 'default'}>
+                  {performanceMetrics.sharpeRatio > 1 ? '表现优秀' : '有待提升'}
+                </Tag>
+              </div>
+            </Card>
+          </Col>
+          
+          <Col xs={12} sm={8} md={6}>
+            <Card size="small" style={{ textAlign: 'center', background: '#fff7e6' }}>
+              <Statistic
+                title="最大回撤"
+                value={Math.abs(performanceMetrics.maxDrawdown * 100)}
+                precision={2}
+                suffix="%"
+                prefix={<FallOutlined />}
+                valueStyle={{ 
+                  color: performanceMetrics.maxDrawdown > -0.15 ? '#faad14' : '#ff4d4f',
+                  fontSize: '18px'
+                }}
+              />
+              <div style={{ marginTop: 8 }}>
+                <Tag color={performanceMetrics.maxDrawdown > -0.15 ? 'gold' : 'error'}>
+                  {performanceMetrics.maxDrawdown > -0.15 ? '风险较低' : '风险较高'}
+                </Tag>
+              </div>
+            </Card>
+          </Col>
+          
+          <Col xs={12} sm={8} md={6}>
+            <Card size="small" style={{ textAlign: 'center', background: '#f6ffed' }}>
+              <Statistic
+                title="胜率"
+                value={performanceMetrics.winRate * 100}
+                precision={2}
+                suffix="%"
+                prefix={<AimOutlined />}
+                valueStyle={{ 
+                  color: performanceMetrics.winRate >= 0.5 ? '#52c41a' : '#ff4d4f',
+                  fontSize: '18px'
+                }}
+              />
+              <div style={{ marginTop: 8 }}>
+                <Tag color={performanceMetrics.winRate > 0.5 ? 'success' : 'error'}>
+                  {performanceMetrics.winRate > 0.5 ? '选股较好' : '选股一般'}
+                </Tag>
+              </div>
+            </Card>
+          </Col>
+          
+          <Col xs={12} sm={8} md={6}>
+            <Card size="small" style={{ textAlign: 'center', background: '#fff0f6' }}>
+              <Statistic
+                title="盈亏比"
+                value={performanceMetrics.profitLossRatio}
+                precision={2}
+                prefix={<PercentageOutlined />}
+                valueStyle={{ 
+                  color: performanceMetrics.profitLossRatio >= 2 ? '#eb2f96' : '#8c8c8c',
+                  fontSize: '18px'
+                }}
+              />
+              <div style={{ marginTop: 8 }}>
+                <Tag color={performanceMetrics.profitLossRatio > 2 ? 'magenta' : 'default'}>
+                  {performanceMetrics.profitLossRatio > 2 ? '盈利能力强' : '盈利能力弱'}
+                </Tag>
+              </div>
+            </Card>
+          </Col>
+          
+          <Col xs={12} sm={8} md={6}>
+            <Card size="small" style={{ textAlign: 'center', background: '#f9f0ff' }}>
+              <Statistic
+                title="波动率"
+                value={performanceMetrics.volatility * 100}
+                precision={2}
+                suffix="%"
+                prefix={<ThunderboltOutlined />}
+                valueStyle={{ 
+                  color: performanceMetrics.volatility < 0.20 ? '#722ed1' : '#ff4d4f',
+                  fontSize: '18px'
+                }}
+              />
+              <div style={{ marginTop: 8 }}>
+                <Tag color={performanceMetrics.volatility < 0.20 ? 'purple' : 'error'}>
+                  {performanceMetrics.volatility < 0.20 ? '波动较小' : '波动较大'}
+                </Tag>
+              </div>
+            </Card>
+          </Col>
+          
+          <Col xs={12} sm={8} md={6}>
+            <Card size="small" style={{ textAlign: 'center', background: '#f0f9ff' }}>
+              <Statistic
+                title="信息比率"
+                value={performanceMetrics.informationRatio}
+                precision={2}
+                prefix={<DashboardOutlined />}
+                valueStyle={{ 
+                  color: performanceMetrics.informationRatio >= 0.5 ? '#1890ff' : '#8c8c8c',
+                  fontSize: '18px'
+                }}
+              />
+              <div style={{ marginTop: 8 }}>
+                <Tag color={performanceMetrics.informationRatio > 0.5 ? 'blue' : 'default'}>
+                  {performanceMetrics.informationRatio > 0.5 ? '信息价值高' : '信息价值低'}
+                </Tag>
+              </div>
+            </Card>
+          </Col>
+          
+          <Col xs={12} sm={8} md={6}>
+            <Card size="small" style={{ textAlign: 'center', background: '#fcfff7' }}>
+              <Statistic
+                title="Beta系数"
+                value={performanceMetrics.beta}
+                precision={2}
+                prefix={<LineChartOutlined />}
+                valueStyle={{ 
+                  color: Math.abs(performanceMetrics.beta - 1) < 0.2 ? '#52c41a' : '#faad14',
+                  fontSize: '18px'
+                }}
+              />
+              <div style={{ marginTop: 8 }}>
+                <Tag color={Math.abs(performanceMetrics.beta - 1) < 0.2 ? 'success' : 'warning'}>
+                  {Math.abs(performanceMetrics.beta - 1) < 0.2 ? '与市场同步' : '偏离市场'}
+                </Tag>
+              </div>
+            </Card>
+          </Col>
+        </Row>
+        
+        <Divider />
+        
+        <Row gutter={[24, 16]}>
+          <Col span={24}>
+            <div style={{ textAlign: 'center' }}>
+              <Text type="secondary">
+                * 绩效指标基于当前持仓数据计算，包含模拟估算值，仅供参考
+              </Text>
+            </div>
+          </Col>
+        </Row>
+      </Card>
+    );
+  };
+
   // 渲染图表
   const renderChart = () => {
     switch (analysisType) {
@@ -852,6 +1329,166 @@ const PortfolioAnalysis = ({ portfolioDetail = {} }) => {
             </Col>
           </Row>
         );
+      case 'performance':
+        return (
+          <>
+            {renderPerformanceOverview()}
+            <Row gutter={[24, 24]}>
+              <Col xs={24} lg={12}>
+                <Card title={<><RadarChartOutlined /> 绩效雷达图</>} style={{ height: 520 }}>
+                  <ReactECharts option={getPerformanceRadarOption()} style={{ height: 460 }} />
+                </Card>
+              </Col>
+              <Col xs={24} lg={12}>
+                <Card title={<><BarChartOutlined /> 绩效对比柱状图</>} style={{ height: 520 }}>
+                  <ReactECharts option={getPerformanceComparisonOption()} style={{ height: 460 }} />
+                </Card>
+              </Col>
+            </Row>
+          </>
+        );
+      case 'riskMetrics':
+        return (
+          <Row gutter={[24, 24]}>
+            <Col xs={24} lg={16}>
+              <Card 
+                title={<><DashboardOutlined /> 风险指标详细分析</>} 
+                style={{ height: 'auto' }}
+                extra={
+                  <Tag color="blue" icon={<CalendarOutlined />}>
+                    截至 {moment().format('YYYY-MM-DD')}
+                  </Tag>
+                }
+              >
+                <Table 
+                  columns={riskMetricsColumns}
+                  dataSource={getRiskMetricsTableData()}
+                  rowKey="key"
+                  pagination={false}
+                  size="middle"
+                  style={{ marginBottom: 16 }}
+                />
+                
+                <Divider />
+                
+                <Row gutter={[16, 16]}>
+                  <Col span={24}>
+                    <Text strong style={{ fontSize: 16 }}>风险评级综合评分</Text>
+                  </Col>
+                  <Col xs={24} sm={12}>
+                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+                      <span style={{ width: 100, display: 'inline-block' }}>收益能力：</span>
+                      <Progress 
+                        percent={Math.max(0, Math.min(100, (performanceMetrics.annualizedReturn + 0.2) / 0.4 * 100))}
+                        strokeColor="#52c41a"
+                        size="small"
+                        style={{ flex: 1, marginRight: 8 }}
+                      />
+                      <Tag color="success">
+                        {Math.max(0, Math.min(100, (performanceMetrics.annualizedReturn + 0.2) / 0.4 * 100)).toFixed(0)}分
+                      </Tag>
+                    </div>
+                  </Col>
+                  <Col xs={24} sm={12}>
+                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+                      <span style={{ width: 100, display: 'inline-block' }}>风险控制：</span>
+                      <Progress 
+                        percent={Math.max(0, Math.min(100, (0.3 - performanceMetrics.volatility) / 0.3 * 100))}
+                        strokeColor="#1890ff"
+                        size="small"
+                        style={{ flex: 1, marginRight: 8 }}
+                      />
+                      <Tag color="blue">
+                        {Math.max(0, Math.min(100, (0.3 - performanceMetrics.volatility) / 0.3 * 100)).toFixed(0)}分
+                      </Tag>
+                    </div>
+                  </Col>
+                  <Col xs={24} sm={12}>
+                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+                      <span style={{ width: 100, display: 'inline-block' }}>稳定性：</span>
+                      <Progress 
+                        percent={Math.max(0, Math.min(100, performanceMetrics.sharpeRatio / 2 * 100))}
+                        strokeColor="#faad14"
+                        size="small"
+                        style={{ flex: 1, marginRight: 8 }}
+                      />
+                      <Tag color="gold">
+                        {Math.max(0, Math.min(100, performanceMetrics.sharpeRatio / 2 * 100)).toFixed(0)}分
+                      </Tag>
+                    </div>
+                  </Col>
+                  <Col xs={24} sm={12}>
+                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+                      <span style={{ width: 100, display: 'inline-block' }}>选股能力：</span>
+                      <Progress 
+                        percent={performanceMetrics.winRate * 100}
+                        strokeColor="#eb2f96"
+                        size="small"
+                        style={{ flex: 1, marginRight: 8 }}
+                      />
+                      <Tag color="magenta">
+                        {(performanceMetrics.winRate * 100).toFixed(0)}分
+                      </Tag>
+                    </div>
+                  </Col>
+                </Row>
+              </Card>
+            </Col>
+            
+            <Col xs={24} lg={8}>
+              <Card 
+                title={<><CrownOutlined /> 综合评分</>} 
+                style={{ height: 'auto' }}
+              >
+                <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                  <div style={{ fontSize: 48, fontWeight: 'bold', color: '#1890ff', marginBottom: 16 }}>
+                    {(() => {
+                      const totalScore = (
+                        Math.max(0, Math.min(100, (performanceMetrics.annualizedReturn + 0.2) / 0.4 * 100)) * 0.3 +
+                        Math.max(0, Math.min(100, (0.3 - performanceMetrics.volatility) / 0.3 * 100)) * 0.25 +
+                        Math.max(0, Math.min(100, performanceMetrics.sharpeRatio / 2 * 100)) * 0.25 +
+                        (performanceMetrics.winRate * 100) * 0.2
+                      );
+                      return totalScore.toFixed(0);
+                    })()}
+                  </div>
+                  <div style={{ fontSize: 18, color: '#8c8c8c', marginBottom: 20 }}>
+                    / 100
+                  </div>
+                  
+                  <div style={{ marginBottom: 20 }}>
+                    {(() => {
+                      const score = (
+                        Math.max(0, Math.min(100, (performanceMetrics.annualizedReturn + 0.2) / 0.4 * 100)) * 0.3 +
+                        Math.max(0, Math.min(100, (0.3 - performanceMetrics.volatility) / 0.3 * 100)) * 0.25 +
+                        Math.max(0, Math.min(100, performanceMetrics.sharpeRatio / 2 * 100)) * 0.25 +
+                        (performanceMetrics.winRate * 100) * 0.2
+                      );
+                      
+                      if (score >= 80) {
+                        return <Tag color="success" style={{ fontSize: 16, padding: '8px 16px' }}>优秀</Tag>;
+                      } else if (score >= 60) {
+                        return <Tag color="warning" style={{ fontSize: 16, padding: '8px 16px' }}>良好</Tag>;
+                      } else if (score >= 40) {
+                        return <Tag color="orange" style={{ fontSize: 16, padding: '8px 16px' }}>一般</Tag>;
+                      } else {
+                        return <Tag color="error" style={{ fontSize: 16, padding: '8px 16px' }}>待改进</Tag>;
+                      }
+                    })()}
+                  </div>
+                  
+                  <div style={{ textAlign: 'left', fontSize: 14, color: '#8c8c8c' }}>
+                    <p>评分标准：</p>
+                    <p>• 收益能力 (30%)</p>
+                    <p>• 风险控制 (25%)</p>
+                    <p>• 稳定性 (25%)</p>
+                    <p>• 选股能力 (20%)</p>
+                  </div>
+                </div>
+              </Card>
+            </Col>
+          </Row>
+        );
       default:
         return null;
     }
@@ -872,6 +1509,8 @@ const PortfolioAnalysis = ({ portfolioDetail = {} }) => {
               <Radio.Button value="asset">资产分析</Radio.Button>
               <Radio.Button value="risk">风险分析</Radio.Button>
               <Radio.Button value="industry">行业分析</Radio.Button>
+              <Radio.Button value="performance">绩效分析</Radio.Button>
+              <Radio.Button value="riskMetrics">风险指标</Radio.Button>
             </Radio.Group>
           </Col>
           <Col>

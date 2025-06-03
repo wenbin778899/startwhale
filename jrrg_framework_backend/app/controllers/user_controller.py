@@ -161,3 +161,125 @@ def get_user_info_by_id(user_id):
     except Exception as e:
         current_app.logger.error(f"获取用户信息失败: {str(e)}")
         return utils.error(message="获取用户信息失败", code=500, status=500)
+
+@user_controller.post('/change-password')
+@jwt_required()
+def change_password():
+    """
+    修改用户密码
+    """
+    try:
+        # 从jwt中获取当前用户的ID
+        current_user_id = get_jwt_identity()
+        
+        # 获取请求数据
+        data = request.get_json()
+        old_password = data.get('oldPassword')
+        new_password = data.get('newPassword')
+        
+        # 验证输入
+        if not old_password or not new_password:
+            return utils.error(message="当前密码和新密码不能为空", code=400, status=400)
+        
+        if len(new_password) < 6:
+            return utils.error(message="新密码长度至少6位", code=400, status=400)
+        
+        # 查询用户
+        user = db.session.query(User).filter_by(id=current_user_id).first()
+        if not user:
+            return utils.error(message="用户不存在", code=404, status=404)
+        
+        # 验证当前密码
+        if not utils.check(old_password, user.password):
+            return utils.error(message="当前密码错误", code=400, status=400)
+        
+        # 加密新密码并更新
+        user.password = utils.encrypt(new_password)
+        db.session.commit()
+        
+        current_app.logger.info(f"用户 {user.username} 成功修改密码")
+        return utils.success(message="密码修改成功")
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"修改密码失败: {str(e)}")
+        return utils.error(message="修改密码失败，请稍后重试", code=500, status=500)
+
+@user_controller.put('/info')
+@jwt_required()
+def update_user_info():
+    """
+    更新用户信息
+    """
+    try:
+        # 从jwt中获取当前用户的ID
+        current_user_id = get_jwt_identity()
+        
+        # 获取请求数据
+        data = request.get_json()
+        nickname = data.get('nickname', '').strip()
+        email = data.get('email', '').strip()
+        phone = data.get('phone', '').strip()
+        
+        # 验证必填字段
+        if not nickname:
+            return utils.error(message="昵称不能为空", code=400, status=400)
+        
+        if not email:
+            return utils.error(message="邮箱不能为空", code=400, status=400)
+            
+        if not phone:
+            return utils.error(message="手机号不能为空", code=400, status=400)
+        
+        # 验证字段长度
+        if len(nickname) > 50:
+            return utils.error(message="昵称长度不能超过50个字符", code=400, status=400)
+            
+        if len(email) > 100:
+            return utils.error(message="邮箱长度不能超过100个字符", code=400, status=400)
+            
+        # 验证邮箱格式
+        email_pattern = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
+        if not re.match(email_pattern, email):
+            return utils.error(message="请输入有效的邮箱地址", code=400, status=400)
+        
+        # 验证手机号格式
+        phone_pattern = r'^1[3-9]\d{9}$'
+        if not re.match(phone_pattern, phone):
+            return utils.error(message="请输入有效的中国大陆手机号码", code=400, status=400)
+        
+        # 查询用户
+        user = db.session.query(User).filter_by(id=current_user_id).first()
+        if not user:
+            return utils.error(message="用户不存在", code=404, status=404)
+        
+        # 检查邮箱是否已被其他用户使用
+        existing_email_user = db.session.query(User).filter(
+            User.email == email, 
+            User.id != current_user_id
+        ).first()
+        if existing_email_user:
+            return utils.error(message="该邮箱已被其他用户使用", code=400, status=400)
+        
+        # 检查手机号是否已被其他用户使用
+        existing_phone_user = db.session.query(User).filter(
+            User.phone == phone, 
+            User.id != current_user_id
+        ).first()
+        if existing_phone_user:
+            return utils.error(message="该手机号已被其他用户使用", code=400, status=400)
+        
+        # 更新用户信息
+        user.nickname = nickname
+        user.email = email
+        user.phone = phone
+        
+        db.session.commit()
+        
+        current_app.logger.info(f"用户 {user.username} 成功更新个人信息")
+        return utils.success(message="个人信息更新成功")
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"更新用户信息失败: {str(e)}")
+        return utils.error(message="更新用户信息失败，请稍后重试", code=500, status=500)
