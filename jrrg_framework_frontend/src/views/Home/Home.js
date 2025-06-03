@@ -915,7 +915,8 @@ const Home = () => {
             <div style={{ height: '100%', border: '1px solid #d9d9d9', borderRadius: '6px', overflow: 'hidden' }}>
               <iframe
                 id="heatmap-iframe"
-                src="https://dapanyuntu.com/"
+                //src="https://dapanyuntu.com/"
+                src="https://stock.diedong.com/"
                 style={{
                   width: '166.67%',
                   height: '166.67%',
@@ -1168,12 +1169,12 @@ const Home = () => {
         destroyOnClose={false}
       >
         <iframe
-          src="https://dapanyuntu.com/"
+          src="https://stock.diedong.com/"
           style={{
             width: '166.67%',
             height: '166.67%',
             border: 'none',
-            transform: 'scale(0.6)',
+            transform: 'scale()',
             transformOrigin: '0 0'
           }}
           title="市场热力 - 大盘云图全屏模式"
