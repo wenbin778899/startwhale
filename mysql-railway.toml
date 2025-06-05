@@ -1,0 +1,11 @@
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile.mysql"
+
+[deploy]
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 10
+
+[env]
+MYSQL_ROOT_PASSWORD = "SecurePass123!"
+MYSQL_DATABASE = "jrrg_framework_db"

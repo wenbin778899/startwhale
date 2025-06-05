@@ -14,14 +14,17 @@ class BaseConfig:
     TESTING = os.getenv('TESTING', 'False') == 'True'
 
     # 数据库相关配置，NOTE 由于使用Flask-SQLAlchemy，所以下面两个配置名称不能自定义
-    # 优先使用环境变量中的数据库URI
-    SQLALCHEMY_DATABASE_URI = os.getenv('SQLALCHEMY_DATABASE_URI') or os.getenv('MYSQL_URL') or 'mysql://root:SecurePass123!@mysql.railway.internal:3306/jrrg_framework_db'
+    # 优先尝试使用外部连接URL，因为内部连接可能有问题
+    SQLALCHEMY_DATABASE_URI = os.getenv('MYSQL_PUBLIC_URL') or os.getenv('SQLALCHEMY_DATABASE_URI') or os.getenv('MYSQL_URL') or 'mysql://root:SecurePass123!@shortline.proxy.rlwy.net:39492/jrrg_framework_db'
     SQLALCHEMY_TRACK_MODIFICATIONS = False # 关闭追踪
     SQLALCHEMY_ENGINE_OPTIONS = {
         'pool_size': 5,  # 连接池大小
         'max_overflow': 10,  # 最大溢出连接数
         'pool_pre_ping': True,  # 检查连接是否有效
-        'pool_recycle': 3600  # 连接回收时间（秒）
+        'pool_recycle': 3600,  # 连接回收时间（秒）
+        'connect_args': {
+            'connect_timeout': 10  # 连接超时时间
+        }
     }
 
     # jwt
