@@ -1,14 +1,13 @@
 [build]
-builder = "nixpacks"
-buildCommand = "CI=false npm run build"
-staticCommand = "npx serve -s build"
-publishDir = "build"
+builder = "DOCKERFILE"
+watchPatterns = ["Dockerfile"]
+buildCommand = "docker build -t app ."
 
 [deploy]
-startCommand = "npx serve -s build"
 healthcheckPath = "/"
 healthcheckTimeout = 100
 restartPolicyType = "on_failure"
 
 [variables]
-NODE_ENV = "production" 
+NODE_ENV = "production"
+REACT_APP_API_URL = "https://jrrg-framework-backend-production.up.railway.app"
