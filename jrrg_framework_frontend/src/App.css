@@ -36,3 +36,183 @@
     transform: rotate(360deg);
   }
 } */
+
+/* 全局动画和过渡效果 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideInUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+/* 应用动画的类 */
+.fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+.slide-in-up {
+  animation: slideInUp 0.5s ease-out forwards;
+}
+
+.pulse {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* 页面切换动画 */
+.page-enter {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.page-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 300ms, transform 300ms;
+}
+
+.page-exit {
+  opacity: 1;
+}
+
+.page-exit-active {
+  opacity: 0;
+  transition: opacity 300ms;
+}
+
+/* 卡片悬停效果 */
+.hover-card {
+  transition: var(--transition-base);
+  border-radius: var(--border-radius-base);
+  overflow: hidden;
+}
+
+.hover-card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--box-shadow-base);
+}
+
+/* 按钮动画效果 */
+.btn-animated {
+  position: relative;
+  overflow: hidden;
+  z-index: 1;
+  transition: var(--transition-base);
+}
+
+.btn-animated::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0) 100%);
+  z-index: -1;
+  transition: all 0.6s;
+}
+
+.btn-animated:hover::before {
+  left: 100%;
+}
+
+/* 图标动画 */
+.icon-spin {
+  animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 渐变背景 */
+.gradient-bg {
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
+  color: white;
+}
+
+/* 玻璃态效果 */
+.glass-effect {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+[data-theme="dark"] .glass-effect {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* 阴影效果 */
+.shadow-effect {
+  box-shadow: var(--box-shadow-base);
+  transition: var(--transition-base);
+}
+
+.shadow-effect:hover {
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.2);
+}
+
+[data-theme="dark"] .shadow-effect:hover {
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.4);
+}
+
+/* 边框渐变 */
+.gradient-border {
+  position: relative;
+  border-radius: var(--border-radius-base);
+  padding: 1px;
+  background: linear-gradient(90deg, var(--primary-color), var(--success-color));
+}
+
+.gradient-border-inner {
+  background: var(--card-bg);
+  border-radius: calc(var(--border-radius-base) - 1px);
+  padding: 20px;
+}

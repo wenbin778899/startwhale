@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Layout, Menu, Button } from 'antd';
+import { Layout, Menu, Button, Badge, Avatar, Dropdown, Space, Tooltip } from 'antd';
 import {
   HomeOutlined,
   LineChartOutlined,
@@ -13,10 +13,29 @@ import {
   MenuUnfoldOutlined,
   BulbFilled,
   SunOutlined,
-  MoonOutlined
+  MoonOutlined,
+  BellOutlined,
+  LogoutOutlined,
+  AppstoreOutlined,
+  TeamOutlined,
+  BarChartOutlined,
+  RiseOutlined,
+  FallOutlined,
+  PieChartOutlined,
+  FundOutlined,
+  GlobalOutlined,
+  BookOutlined,
+  ReadOutlined,
+  FileTextOutlined,
+  AlertOutlined,
+  SafetyOutlined,
+  DashboardOutlined,
+  RobotOutlined,
+  CloudOutlined
 } from '@ant-design/icons';
 import { Link, useLocation } from 'react-router-dom';
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { CSSTransition, TransitionGroup } from 'react-transition-group';
 import Home from '../views/Home/Home';
 import StockQuery from '../views/Stock/StockQuery';
 import AIAnalysis from '../views/AI/AIAnalysis';
@@ -27,6 +46,7 @@ import NotFound from '../views/NotFound/NotFound';
 import './MainLayout.css';
 
 const { Header, Sider, Content } = Layout;
+const { SubMenu } = Menu;
 
 const MainLayout = () => {
   const [collapsed, setCollapsed] = useState(false);
@@ -70,17 +90,255 @@ const MainLayout = () => {
 
   const getSelectedKey = () => {
     const path = location.pathname;
-    if (path === '/') return '1';
+    if (path === '/' || path === '/home') return '1';
     if (path.startsWith('/stock')) return '2';
     if (path.startsWith('/ai')) return '3';
     if (path.startsWith('/strategy')) return '4';
-    if (path.startsWith('/user')) return '5';
+    if (path.startsWith('/portfolio')) return '5';
+    if (path.startsWith('/industry')) return '6';
+    if (path.startsWith('/news')) return '7';
+    if (path.startsWith('/user')) return '8';
     return '1';
   };
 
   const toggleSidebar = () => {
     setCollapsed(!collapsed);
   };
+
+  // 用户菜单项
+  const userMenuItems = [
+    {
+      key: 'profile',
+      icon: <UserOutlined />,
+      label: '个人资料',
+    },
+    {
+      key: 'settings',
+      icon: <SettingOutlined />,
+      label: '账户设置',
+    },
+    {
+      type: 'divider',
+    },
+    {
+      key: 'logout',
+      icon: <LogoutOutlined />,
+      label: '退出登录',
+    },
+  ];
+
+  // 通知菜单项
+  const notificationItems = [
+    {
+      key: 'notification1',
+      label: '系统更新通知',
+      description: '系统已更新到最新版本',
+      time: '10分钟前',
+    },
+    {
+      key: 'notification2',
+      label: '股票价格提醒',
+      description: '您关注的股票价格已达到设定值',
+      time: '30分钟前',
+    },
+    {
+      key: 'notification3',
+      label: '账户安全提醒',
+      description: '请定期修改您的密码',
+      time: '1小时前',
+    },
+  ];
+
+  // 侧边栏菜单项
+  const sidebarMenuItems = [
+    {
+      key: '1',
+      icon: <DashboardOutlined />,
+      label: '首页',
+      path: '/',
+    },
+    {
+      key: '2',
+      icon: <LineChartOutlined />,
+      label: '股票市场',
+      children: [
+        {
+          key: '2-1',
+          label: '股票查询',
+          path: '/stock',
+          icon: <SearchOutlined />,
+        },
+        {
+          key: '2-2',
+          label: '行情走势',
+          path: '/stock/trend',
+          icon: <RiseOutlined />,
+        },
+        {
+          key: '2-3',
+          label: '热门板块',
+          path: '/stock/hot',
+          icon: <FireOutlined />,
+        }
+      ]
+    },
+    {
+      key: '3',
+      icon: <RobotOutlined />,
+      label: 'AI智能分析',
+      children: [
+        {
+          key: '3-1',
+          label: '智能诊股',
+          path: '/ai',
+          icon: <BulbOutlined />,
+        },
+        {
+          key: '3-2',
+          label: '智能选股',
+          path: '/ai/selection',
+          icon: <FundOutlined />,
+        },
+        {
+          key: '3-3',
+          label: '市场预测',
+          path: '/ai/prediction',
+          icon: <CloudOutlined />,
+        }
+      ]
+    },
+    {
+      key: '4',
+      icon: <StarOutlined />,
+      label: '投资策略',
+      children: [
+        {
+          key: '4-1',
+          label: 'AI股市策略',
+          path: '/strategy/manage',
+          icon: <BarChartOutlined />,
+        },
+        {
+          key: '4-2',
+          label: 'AI基金策略',
+          path: '/strategy/fund',
+          icon: <BankOutlined />,
+        },
+        {
+          key: '4-3',
+          label: '策略回测',
+          path: '/strategy/backtest',
+          icon: <PieChartOutlined />,
+        }
+      ]
+    },
+    {
+      key: '5',
+      icon: <SafetyOutlined />,
+      label: '投资组合',
+      children: [
+        {
+          key: '5-1',
+          label: '我的持仓',
+          path: '/portfolio',
+          icon: <FundOutlined />,
+        },
+        {
+          key: '5-2',
+          label: '风险评估',
+          path: '/portfolio/risk',
+          icon: <AlertOutlined />,
+        },
+        {
+          key: '5-3',
+          label: '收益分析',
+          path: '/portfolio/returns',
+          icon: <RiseOutlined />,
+        }
+      ]
+    },
+    {
+      key: '6',
+      icon: <GlobalOutlined />,
+      label: '行业分析',
+      path: '/industry',
+    },
+    {
+      key: '7',
+      icon: <ReadOutlined />,
+      label: '市场资讯',
+      children: [
+        {
+          key: '7-1',
+          label: '实时新闻',
+          path: '/news',
+          icon: <FileTextOutlined />,
+        },
+        {
+          key: '7-2',
+          label: '研究报告',
+          path: '/news/research',
+          icon: <BookOutlined />,
+        }
+      ]
+    },
+    {
+      key: '8',
+      icon: <UserOutlined />,
+      label: '个人中心',
+      path: '/user',
+    },
+  ];
+
+  // 渲染侧边栏菜单
+  const renderMenu = (menuItems) => {
+    return menuItems.map(item => {
+      if (item.children) {
+        return (
+          <SubMenu 
+            key={item.key} 
+            icon={item.icon} 
+            title={item.label}
+            className="sidebar-submenu"
+          >
+            {renderMenu(item.children)}
+          </SubMenu>
+        );
+      }
+      return (
+        <Menu.Item key={item.key} icon={item.icon} className="sidebar-menu-item">
+          <Link to={item.path}>{item.label}</Link>
+        </Menu.Item>
+      );
+    });
+  };
+
+  // 获取当前页面标题和图标
+  const getCurrentPageInfo = () => {
+    const path = location.pathname;
+    const currentMenu = findMenuByPath(sidebarMenuItems, path);
+    
+    return {
+      title: currentMenu ? currentMenu.label : '首页',
+      icon: currentMenu ? currentMenu.icon : <DashboardOutlined />
+    };
+  };
+
+  // 通过路径查找菜单项
+  const findMenuByPath = (items, path) => {
+    for (const item of items) {
+      if (item.path === path) {
+        return item;
+      }
+      if (item.children) {
+        const found = findMenuByPath(item.children, path);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+
+  const currentPageInfo = getCurrentPageInfo();
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
@@ -99,39 +357,10 @@ const MainLayout = () => {
           mode="inline"
           defaultSelectedKeys={[getSelectedKey()]}
           selectedKeys={[getSelectedKey()]}
-          items={[
-            {
-              key: '1',
-              icon: <HomeOutlined />,
-              label: <Link to="/">首页</Link>,
-            },
-            {
-              key: '2',
-              icon: <LineChartOutlined />,
-              label: <Link to="/stock">股票查询</Link>,
-            },
-            {
-              key: '3',
-              icon: <BulbOutlined />,
-              label: <Link to="/ai">AI分析</Link>,
-            },
-            {
-              key: '4',
-              icon: <StarOutlined />,
-              label: <Link to="/strategy/manage">AI股市</Link>,
-            },
-            {
-              key: '5',
-              icon: <BankOutlined />,
-              label: <Link to="/strategy/fund">AI基金</Link>,
-            },
-            {
-              key: '6',
-              icon: <UserOutlined />,
-              label: <Link to="/user">个人中心</Link>,
-            },
-          ]}
-        />
+          defaultOpenKeys={collapsed ? [] : ['2', '3', '4', '5', '7']}
+        >
+          {renderMenu(sidebarMenuItems)}
+        </Menu>
       </Sider>
       <Layout>
         <Header className={`main-header ${isDarkMode ? 'dark' : ''}`}>
@@ -144,45 +373,74 @@ const MainLayout = () => {
               style={{ display: isMobile ? 'none' : 'inline-block' }}
             />
             <div className="current-section">
-              {location.pathname === '/' && <HomeOutlined />}
-              {location.pathname.startsWith('/stock') && <LineChartOutlined />}
-              {location.pathname.startsWith('/ai') && <BulbOutlined />}
-              {location.pathname.startsWith('/strategy') && <StarOutlined />}
-              {location.pathname.startsWith('/user') && <UserOutlined />}
-              <span>
-                {location.pathname === '/' && '首页'}
-                {location.pathname.startsWith('/stock') && '股票查询'}
-                {location.pathname.startsWith('/ai') && 'AI分析'}
-                {location.pathname.startsWith('/strategy') && 'AI股市'}
-                {location.pathname.startsWith('/user') && '个人中心'}
-              </span>
+              {currentPageInfo.icon}
+              <span>{currentPageInfo.title}</span>
             </div>
           </div>
           <div className="header-right">
-            <Button 
-              type="text" 
-              icon={isDarkMode ? <MoonOutlined /> : <SunOutlined />} 
-              onClick={toggleTheme}
-              className="theme-toggle"
-              title={isDarkMode ? "切换到亮色模式" : "切换到暗色模式"}
-            />
-            <Button type="link" icon={<UserOutlined />} className="user-button">
-              张三
-            </Button>
-            <Button type="link" icon={<SettingOutlined />} className="settings-button" />
+            <Tooltip title={isDarkMode ? "切换到亮色模式" : "切换到暗色模式"}>
+              <Button 
+                type="text" 
+                icon={isDarkMode ? <MoonOutlined /> : <SunOutlined />} 
+                onClick={toggleTheme}
+                className="theme-toggle"
+              />
+            </Tooltip>
+            
+            <Dropdown
+              menu={{
+                items: notificationItems.map(item => ({
+                  key: item.key,
+                  label: (
+                    <div style={{ padding: '8px 0' }}>
+                      <div style={{ fontWeight: 'bold' }}>{item.label}</div>
+                      <div style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>{item.description}</div>
+                      <div style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginTop: '4px' }}>{item.time}</div>
+                    </div>
+                  ),
+                })),
+              }}
+              placement="bottomRight"
+              trigger={['click']}
+            >
+              <Badge count={3} size="small">
+                <Button type="text" icon={<BellOutlined />} className="settings-button" />
+              </Badge>
+            </Dropdown>
+            
+            <Dropdown 
+              menu={{ items: userMenuItems }}
+              placement="bottomRight"
+              trigger={['click']}
+            >
+              <Button type="link" className="user-button">
+                <Space>
+                  <Avatar icon={<UserOutlined />} size="small" />
+                  <span>张三</span>
+                </Space>
+              </Button>
+            </Dropdown>
           </div>
         </Header>
         <Content className="main-content">
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/stock" element={<StockQuery />} />
-            <Route path="/ai" element={<AIAnalysis />} />
-            <Route path="/strategy/manage" element={<StrategyManage />} />
-            <Route path="/strategy/fund" element={<FundManage />} />
-            <Route path="/user" element={<UserCenter />} />
-            <Route path="/404" element={<NotFound />} />
-            <Route path="*" element={<Navigate to="/404" replace />} />
-          </Routes>
+          <TransitionGroup>
+            <CSSTransition
+              key={location.pathname}
+              timeout={300}
+              classNames="page-transition"
+            >
+              <Routes location={location}>
+                <Route path="/" element={<Home />} />
+                <Route path="/stock" element={<StockQuery />} />
+                <Route path="/ai" element={<AIAnalysis />} />
+                <Route path="/strategy/manage" element={<StrategyManage />} />
+                <Route path="/strategy/fund" element={<FundManage />} />
+                <Route path="/user" element={<UserCenter />} />
+                <Route path="/404" element={<NotFound />} />
+                <Route path="*" element={<Navigate to="/404" replace />} />
+              </Routes>
+            </CSSTransition>
+          </TransitionGroup>
         </Content>
       </Layout>
     </Layout>
