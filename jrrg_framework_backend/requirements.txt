@@ -39,4 +39,8 @@ Pillow==10.3.0
 # 日期时间处理库
 pytz==2024.1
 # TA-Lib技术分析库
-TA-Lib==0.4.28
+
+# 部署需要的额外包
+gunicorn==21.2.0
+uvicorn==0.29.0
+psycopg2-binary==2.9.9

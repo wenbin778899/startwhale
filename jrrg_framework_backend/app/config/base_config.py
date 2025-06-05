@@ -1,16 +1,21 @@
 import os
 from dotenv import load_dotenv
 
-# 加载env
-load_dotenv('app.env')
+# 尝试加载.env文件，如果存在的话
+if os.path.exists('app.env'):
+    load_dotenv('app.env')
+else:
+    # 在部署环境中，可能不需要显式加载.env文件，因为环境变量已经通过平台设置
+    pass
 
 class BaseConfig:
     # 服务配置
-    DEBUG = os.getenv('DEBUG') == 'True'
-    TESTING = os.getenv('TESTING') == 'True'
+    DEBUG = os.getenv('DEBUG', 'False') == 'True'
+    TESTING = os.getenv('TESTING', 'False') == 'True'
 
     # 数据库相关配置，NOTE 由于使用Flask-SQLAlchemy，所以下面两个配置名称不能自定义
-    SQLALCHEMY_DATABASE_URI = os.getenv('SQLALCHEMY_DATABASE_URI') # 配置url
+    # 优先使用环境变量中的数据库URI
+    SQLALCHEMY_DATABASE_URI = os.getenv('SQLALCHEMY_DATABASE_URI') 
     SQLALCHEMY_TRACK_MODIFICATIONS = False # 关闭追踪
     SQLALCHEMY_ENGINE_OPTIONS = {
         'pool_size': 5,  # 连接池大小
@@ -20,5 +25,5 @@ class BaseConfig:
     }
 
     # jwt
-    JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY')
-    JWT_TOKEN_LOCATION = os.getenv('JWT_TOKEN_LOCATION')
+    JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'default_secret_key')
+    JWT_TOKEN_LOCATION = os.getenv('JWT_TOKEN_LOCATION', 'headers')
