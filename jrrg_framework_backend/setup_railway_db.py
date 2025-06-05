@@ -25,6 +25,16 @@ def init_db():
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
             print("数据库连接成功")
+            
+            # 检查数据库是否已经初始化
+            result = conn.execute(text("SHOW TABLES"))
+            tables = [row[0] for row in result]
+            if tables:
+                print(f"数据库已存在表: {', '.join(tables)}")
+                user_input = input("数据库中已有表，是否继续初始化？(y/n): ")
+                if user_input.lower() != 'y':
+                    print("取消初始化")
+                    return False
         
         # 执行SQL脚本
         execute_sql_files(engine)
@@ -85,4 +95,4 @@ if __name__ == "__main__":
         print("数据库初始化成功")
     else:
         print("数据库初始化失败")
-        sys.exit(1) 
+        sys.exit(1)

@@ -18,6 +18,7 @@ COPY . .
 ENV CI=false
 ENV ESLINT_NO_DEV_ERRORS=true
 ENV DISABLE_ESLINT_PLUGIN=true
+ENV REACT_APP_API_URL=https://startwhale-production.up.railway.app
 
 # 构建应用
 RUN npm run build

@@ -10,4 +10,7 @@ restartPolicyType = "on_failure"
 
 [variables]
 NODE_ENV = "production"
-REACT_APP_API_URL = "https://jrrg-framework-backend-production.up.railway.app"
+REACT_APP_API_URL = "https://startwhale-production.up.railway.app"
+DISABLE_ESLINT_PLUGIN = "true"
+ESLINT_NO_DEV_ERRORS = "true"
+CI = "false"

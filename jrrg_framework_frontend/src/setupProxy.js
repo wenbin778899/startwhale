@@ -2,11 +2,14 @@
 
 const { createProxyMiddleware } = require('http-proxy-middleware')    //解构出createProxyMiddleware
 
+// 获取环境变量中的API URL，如果不存在则使用默认值
+const API_URL = process.env.REACT_APP_API_URL || 'https://startwhale-production.up.railway.app';
+
 module.exports = function (app) {
     app.use(
-        '/api', // 这段逻辑的意思是说拦截所有以“/api”开头的http请求，并且转发到设置的target地址对应的主机中，并且将“/api”替换为空（即删除），所以设置完这段逻辑之后所有的请求都必须以/api开头
+        '/api', // 这段逻辑的意思是说拦截所有以"/api"开头的http请求，并且转发到设置的target地址对应的主机中，并且将"/api"替换为空（即删除），所以设置完这段逻辑之后所有的请求都必须以/api开头
         createProxyMiddleware({        //使用createProxyMiddleware
-            target: 'http://localhost:8080/',
+            target: API_URL,
             changeOrigin: true,
             pathRewrite: { '/api': '' }
         })
