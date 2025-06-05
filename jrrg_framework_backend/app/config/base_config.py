@@ -14,8 +14,8 @@ class BaseConfig:
     TESTING = os.getenv('TESTING', 'False') == 'True'
 
     # 数据库相关配置，NOTE 由于使用Flask-SQLAlchemy，所以下面两个配置名称不能自定义
-    # 优先使用环境变量中的数据库URI
-    SQLALCHEMY_DATABASE_URI = os.getenv('SQLALCHEMY_DATABASE_URI') 
+    # 优先使用环境变量中的数据库URI，如果没有则使用MySQL_URL
+    SQLALCHEMY_DATABASE_URI = os.getenv('SQLALCHEMY_DATABASE_URI') or os.getenv('MYSQL_URL') or 'mysql://root:SecurePass123!@mysql.railway.internal:3306/jrrg_framework_db'
     SQLALCHEMY_TRACK_MODIFICATIONS = False # 关闭追踪
     SQLALCHEMY_ENGINE_OPTIONS = {
         'pool_size': 5,  # 连接池大小

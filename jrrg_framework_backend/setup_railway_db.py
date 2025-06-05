@@ -1,5 +1,5 @@
 """
-数据库迁移脚本，用于在Railway上初始化PostgreSQL数据库
+数据库迁移脚本，用于在Railway上初始化MySQL数据库
 """
 import os
 import sys
@@ -10,10 +10,10 @@ from sqlalchemy.exc import SQLAlchemyError
 def init_db():
     """初始化数据库结构"""
     try:
-        # 获取数据库连接URL
-        db_url = os.getenv('SQLALCHEMY_DATABASE_URI')
+        # 获取数据库连接URL，优先使用MYSQL_URL环境变量
+        db_url = os.getenv('MYSQL_URL') or os.getenv('SQLALCHEMY_DATABASE_URI')
         if not db_url:
-            print("错误: 未设置SQLALCHEMY_DATABASE_URI环境变量")
+            print("错误: 未设置MYSQL_URL或SQLALCHEMY_DATABASE_URI环境变量")
             sys.exit(1)
             
         print(f"连接到数据库: {db_url}")
@@ -50,16 +50,7 @@ def execute_sql_files(engine):
         'backtest_tables.sql'
     ]
     
-    # 转换MySQL语法到PostgreSQL语法
-    mysql_to_postgres_replacements = {
-        'AUTO_INCREMENT': 'SERIAL',
-        'DATETIME': 'TIMESTAMP',
-        'INT': 'INTEGER',
-        'TINYINT(1)': 'BOOLEAN',
-        'DOUBLE': 'DOUBLE PRECISION',
-        'ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci': '',
-        # 添加更多需要替换的MySQL特定语法
-    }
+    # 由于使用的是MySQL数据库，不需要进行语法转换
     
     for sql_file in sql_files:
         try:
@@ -68,10 +59,6 @@ def execute_sql_files(engine):
             # 读取SQL文件内容
             with open(sql_file, 'r', encoding='utf-8') as f:
                 sql_content = f.read()
-            
-            # 转换语法
-            for mysql_syntax, postgres_syntax in mysql_to_postgres_replacements.items():
-                sql_content = sql_content.replace(mysql_syntax, postgres_syntax)
             
             # 将SQL拆分为单独的语句
             statements = sql_content.split(';')
