@@ -4,6 +4,10 @@ FROM mysql:8.0
 ENV MYSQL_ROOT_PASSWORD=SecurePass123!
 ENV MYSQL_DATABASE=jrrg_framework_db
 
+# 复制自定义入口点脚本
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
 # 复制初始化SQL脚本（如果有）
 COPY jrrg_framework_backend/*.sql /docker-entrypoint-initdb.d/
 
@@ -11,6 +15,12 @@ COPY jrrg_framework_backend/*.sql /docker-entrypoint-initdb.d/
 RUN echo "[mysqld]" > /etc/mysql/conf.d/charset.cnf && \
     echo "character-set-server=utf8mb4" >> /etc/mysql/conf.d/charset.cnf && \
     echo "collation-server=utf8mb4_unicode_ci" >> /etc/mysql/conf.d/charset.cnf
+
+# 设置入口点
+ENTRYPOINT ["docker-entrypoint.sh"]
+
+# 默认命令
+CMD ["mysqld"]
 
 # 暴露端口
 EXPOSE 3306
