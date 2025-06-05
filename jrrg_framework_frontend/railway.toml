@@ -1,0 +1,14 @@
+[build]
+builder = "nixpacks"
+buildCommand = "CI=false npm run build"
+staticCommand = "npx serve -s build"
+publishDir = "build"
+
+[deploy]
+startCommand = "npx serve -s build"
+healthcheckPath = "/"
+healthcheckTimeout = 100
+restartPolicyType = "on_failure"
+
+[variables]
+NODE_ENV = "production" 
